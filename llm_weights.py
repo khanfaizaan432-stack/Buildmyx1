@@ -6,6 +6,7 @@ Gemini-powered objective weight selection.
 
 import json
 import os
+import re
 from typing import Iterable, Dict, Any
 
 DEFAULT_QUALITY_WEIGHT = 0.60
@@ -68,7 +69,7 @@ def format_weight_prompt(user_text: str, dataframe_columns: Iterable[str]) -> st
 def decide_weights_with_gemini(
     user_text: str,
     dataframe_columns: Iterable[str],
-    model_name: str = "gemini-2.0-flash",
+    model_name: str = "gemini-2.5-flash",
     api_key: str | None = None,
 ) -> Dict[str, Any]:
     """
@@ -145,3 +146,157 @@ def decide_weights_with_gemini(
                 ),
                 "source": "fallback",
             }
+
+
+def _heuristic_club_intent(user_text: str, clubs: list[str]) -> tuple[str | None, list[str]]:
+    """Fallback extraction of club intent from prompt text."""
+    text = (user_text or "").lower()
+    mentioned = [club for club in clubs if club.lower() in text]
+
+    required_club = None
+    for club in mentioned:
+        club_l = club.lower()
+        if f"all {club_l}" in text or f"only {club_l}" in text or f"{club_l} only" in text:
+            required_club = club
+            break
+
+    return required_club, mentioned
+
+
+def decide_squad_strategy_with_gemini(
+    user_text: str,
+    dataframe,
+    tactic_options: list[str],
+    formation_options: list[str],
+    model_name: str = "gemini-2.5-flash",
+    api_key: str | None = None,
+) -> Dict[str, Any]:
+    """
+    Use Gemini as an expert football analyst to convert user intent into
+    optimization controls (weights + constraints).
+    """
+    clubs = sorted({str(c).strip() for c in dataframe.get("Squad", []) if str(c).strip()})
+    required_club_h, preferred_h = _heuristic_club_intent(user_text, clubs)
+
+    fallback = {
+        "quality_weight": DEFAULT_QUALITY_WEIGHT,
+        "tactic_weight": DEFAULT_TACTIC_WEIGHT,
+        "required_club": required_club_h,
+        "preferred_clubs": preferred_h[:3],
+        "avoid_clubs": [],
+        "formation_override": None,
+        "tactic_override": None,
+        "analyst_notes": "Using fallback strategy.",
+        "source": "fallback",
+    }
+
+    key = api_key or os.getenv("GEMINI_API_KEY", "")
+    if not key:
+        fallback["analyst_notes"] = "GEMINI_API_KEY not set; using fallback strategy."
+        return fallback
+
+    prompt = (
+        "You are an expert football analyst helping select an optimal XI.\n"
+        "Convert the user request into optimization controls.\n\n"
+        f"User request:\n{user_text.strip() or 'No specific request'}\n\n"
+        f"Available clubs:\n{', '.join(clubs)}\n\n"
+        f"Allowed formations:\n{', '.join(formation_options)}\n"
+        f"Allowed tactics:\n{', '.join(tactic_options)}\n\n"
+        "Return strict JSON only with this schema:\n"
+        "{\n"
+        "  \"quality_weight\": number,\n"
+        "  \"tactic_weight\": number,\n"
+        "  \"required_club\": string|null,\n"
+        "  \"preferred_clubs\": string[],\n"
+        "  \"avoid_clubs\": string[],\n"
+        "  \"formation_override\": string|null,\n"
+        "  \"tactic_override\": string|null,\n"
+        "  \"analyst_notes\": string\n"
+        "}\n"
+        "Rules:\n"
+        "- If user asks for all players from one club, set required_club to that club.\n"
+        "- Keep weights between 0 and 1 and summing to 1.\n"
+        "- Use only clubs/formations/tactics from provided lists."
+    )
+
+    try:
+        genai_mod = __import__("google.genai", fromlist=["Client", "types"])
+        client = genai_mod.Client(api_key=key)
+        genai_types = genai_mod.types
+        response = client.models.generate_content(
+            model=model_name,
+            contents=prompt,
+            config=genai_types.GenerateContentConfig(response_mime_type="application/json"),
+        )
+        parsed = json.loads(response.text)
+        normalized = _normalize_weights(parsed.get("quality_weight"), parsed.get("tactic_weight"))
+
+        required_club = parsed.get("required_club")
+        if required_club not in clubs:
+            required_club = required_club_h
+
+        preferred_clubs = [c for c in parsed.get("preferred_clubs", []) if c in clubs]
+        avoid_clubs = [c for c in parsed.get("avoid_clubs", []) if c in clubs]
+        formation_override = parsed.get("formation_override")
+        if formation_override not in formation_options:
+            formation_override = None
+        tactic_override = parsed.get("tactic_override")
+        if tactic_override not in tactic_options:
+            tactic_override = None
+
+        return {
+            **normalized,
+            "required_club": required_club,
+            "preferred_clubs": preferred_clubs,
+            "avoid_clubs": avoid_clubs,
+            "formation_override": formation_override,
+            "tactic_override": tactic_override,
+            "analyst_notes": str(parsed.get("analyst_notes", "Analyst strategy generated.")),
+            "source": "gemini",
+        }
+    except Exception as exc:
+        fallback["analyst_notes"] = f"Gemini strategy failed ({exc}); using fallback strategy."
+        return fallback
+
+
+def pundit_review_with_gemini(
+    user_text: str,
+    formation: str,
+    tactic: str,
+    squad_df,
+    model_name: str = "gemini-2.5-flash",
+    api_key: str | None = None,
+) -> str:
+    """Generate a concise pundit-style review for the selected XI."""
+    key = api_key or os.getenv("GEMINI_API_KEY", "")
+    if not key:
+        return "Pundit review unavailable: GEMINI_API_KEY not set."
+
+    squad_lines = []
+    for _, row in squad_df.iterrows():
+        squad_lines.append(
+            f"{row.get('slot','?')} | {row.get('Player','Unknown')} | {row.get('Squad','Unknown')} | "
+            f"Q {float(row.get('quality',0)):.1f}% | Fit {float(row.get('tactic_fit',0)):.1f}%"
+        )
+    squad_blob = "\n".join(squad_lines)
+
+    prompt = (
+        "You are an elite football TV pundit.\n"
+        "Analyze this generated XI and provide a sharp professional review.\n"
+        "Keep it practical and tactical.\n\n"
+        f"User intent:\n{user_text}\n\n"
+        f"Formation: {formation}\n"
+        f"Tactic: {tactic}\n"
+        f"Squad:\n{squad_blob}\n\n"
+        "Output 4 short paragraphs:"
+        " tactical identity, strengths, risks, and one actionable improvement."
+    )
+
+    try:
+        genai_mod = __import__("google.genai", fromlist=["Client"])
+        client = genai_mod.Client(api_key=key)
+        response = client.models.generate_content(model=model_name, contents=prompt)
+        text = (response.text or "").strip()
+        return text if text else "Pundit review unavailable: empty model response."
+    except Exception as exc:
+        return f"Pundit review unavailable: {exc}"

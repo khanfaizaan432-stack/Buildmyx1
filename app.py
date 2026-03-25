@@ -2,7 +2,6 @@
 import difflib
 from pathlib import Path
 
-import matplotlib.pyplot as plt
 import pandas as pd
 import streamlit as st
 
@@ -16,7 +15,10 @@ from draft import (
     get_eligible_players,
     remaining_slots,
 )
-from llm_weights import decide_weights_with_gemini
+from llm_weights import (
+    decide_squad_strategy_with_gemini,
+    pundit_review_with_gemini,
+)
 from optimizer import optimize
 from pitch_viz import draw_pitch
 
@@ -24,7 +26,7 @@ st.set_page_config(
     page_title="Build My XI",
     layout="wide",
     page_icon="soccer",
-    initial_sidebar_state="expanded",
+    initial_sidebar_state="collapsed",
 )
 
 st.markdown(
@@ -34,12 +36,129 @@ st.markdown(
 
 html, body, [class*="st-"] {
     font-family: 'Outfit', sans-serif;
-    background-color: #0d0d1a !important;
+    background-color: transparent !important;
+}
+
+.stApp {
+    background-color: #0b101a;
+    padding-bottom: 52px;
 }
 
 [data-testid="stSidebar"] {
     background-color: #12122b;
     border-right: 1px solid #1f1f3a;
+}
+
+[data-testid="collapsedControl"] {
+    background: rgba(8, 14, 24, 0.76);
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    border-radius: 10px;
+}
+
+.landing-shell {
+    position: relative;
+    margin: 56px auto 28px;
+    max-width: 860px;
+    border-radius: 24px;
+    border: 1px solid rgba(176, 208, 255, 0.24);
+    background: linear-gradient(165deg, rgba(6, 18, 36, 0.42), rgba(8, 20, 36, 0.26));
+    box-shadow: 0 20px 52px rgba(0, 0, 0, 0.34);
+    backdrop-filter: blur(3px);
+    overflow: hidden;
+    padding: 40px 28px 32px;
+    text-align: center;
+}
+
+.landing-shell::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image: linear-gradient(to right, rgba(157, 199, 255, 0.16) 1px, transparent 1px),
+                      linear-gradient(to bottom, rgba(157, 199, 255, 0.16) 1px, transparent 1px);
+    background-size: 34px 34px;
+    opacity: 0.12;
+    pointer-events: none;
+}
+
+.landing-shell::after {
+    content: "";
+    position: absolute;
+    width: 320px;
+    height: 320px;
+    top: -180px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: radial-gradient(circle, rgba(112, 177, 255, 0.42), rgba(112, 177, 255, 0));
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+.landing-kicker {
+    position: relative;
+    z-index: 2;
+    display: inline-block;
+    margin-bottom: 10px;
+    padding: 6px 11px;
+    border-radius: 999px;
+    border: 1px solid rgba(139, 191, 255, 0.42);
+    background: rgba(12, 28, 52, 0.6);
+    color: #b9d6ff;
+    font-size: 0.75rem;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+}
+
+.landing-shell h1 {
+    position: relative;
+    z-index: 2;
+    margin: 0;
+    font-size: clamp(2.3rem, 5vw, 3.7rem);
+    letter-spacing: 0.8px;
+    color: #f5f7ff;
+    text-shadow: 0 0 22px rgba(86, 156, 255, 0.35);
+}
+
+.landing-shell p {
+    position: relative;
+    z-index: 2;
+    margin: 12px auto 0;
+    max-width: 760px;
+    font-size: 1.06rem;
+    color: #cad7ee;
+}
+
+.landing-chip-row {
+    margin-top: 18px;
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.landing-chip {
+    position: relative;
+    z-index: 2;
+    font-size: 0.79rem;
+    color: #e6f0ff;
+    border: 1px solid rgba(151, 196, 255, 0.56);
+    border-radius: 999px;
+    padding: 6px 11px;
+    background: rgba(16, 35, 63, 0.58);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.09);
+}
+
+.fixed-footer {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 998;
+    text-align: center;
+    font-size: 0.78rem;
+    color: #b7c5df;
+    background: linear-gradient(180deg, rgba(6, 10, 19, 0), rgba(6, 10, 19, 0.85) 30%, rgba(6, 10, 19, 0.96));
+    padding: 8px 10px 10px;
+    letter-spacing: 0.25px;
 }
 
 .metric-card {
@@ -105,191 +224,11 @@ html, body, [class*="st-"] {
     width: 100% !important;
 }
 
-.tactical-engine-container {
-    position: relative;
-    border-radius: 22px;
-    border: 1px solid rgba(255,255,255,0.16);
-    overflow: hidden;
-    padding: 24px;
-    box-shadow: 0 30px 70px rgba(0, 0, 0, 0.45);
-    background: radial-gradient(circle at 20% 0%, rgba(40, 140, 90, 0.22), transparent 45%),
-                radial-gradient(circle at 80% 100%, rgba(245, 166, 35, 0.16), transparent 35%),
-                linear-gradient(140deg, #101827 0%, #0d1422 100%);
-}
-
-.tactical-engine-container::after {
-    content: "";
-    position: absolute;
-    width: 220px;
-    height: 220px;
-    border-radius: 50%;
-    right: -55px;
-    top: -55px;
-    background: radial-gradient(circle at 30% 30%, rgba(255, 176, 66, 0.9), rgba(255, 176, 66, 0));
-    opacity: 0.45;
-}
-
-.manager-bg {
-    position: absolute;
-    inset: 0;
-    background-image: linear-gradient(to right, rgba(255,255,255,0.045) 1px, transparent 1px),
-                      linear-gradient(to bottom, rgba(255,255,255,0.045) 1px, transparent 1px);
-    background-size: 22px 22px;
-    opacity: 0.25;
-}
-
-.manager-hero {
-    position: relative;
-    z-index: 2;
-    width: 100%;
-    max-width: 920px;
-    margin: 0 auto 20px;
-    border-radius: 14px;
-    min-height: 280px;
-    border: 1px solid rgba(255,255,255,0.22);
-    background: linear-gradient(120deg, #17324f 0%, #0f243b 45%, #15202f 100%);
-}
-.manager-hero.has-image {
-    background-size: cover;
-    background-position: center top;
-}
-
-.manager-hero::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(to top, rgba(7, 12, 22, 0.8) 0%, rgba(7, 12, 22, 0.15) 55%, rgba(7, 12, 22, 0.62) 100%);
-}
-
-.logo-shell {
-    position: relative;
-    z-index: 3;
-    margin: -68px auto 16px;
-    width: min(320px, 80%);
-    border-radius: 16px;
-    padding: 10px;
-    background: rgba(8, 15, 30, 0.86);
-    border: 1px solid rgba(245, 166, 35, 0.6);
-}
-.logo-image {
-    width: 100%;
-    display: block;
-    border-radius: 10px;
-}
-.logo-fallback {
-    text-align: center;
-    font-weight: 800;
-    letter-spacing: 2px;
-    color: #ffb547;
-    padding: 18px;
-    border: 1px dashed rgba(255, 181, 71, 0.5);
-    border-radius: 10px;
-}
-.asset-hint {
-    margin: 8px 0 2px;
-    text-align: center;
-    font-size: 0.84rem;
-    color: #9fb2ca;
-}
-
-.hero-kicker {
-    display: inline-block;
-    padding: 6px 12px;
-    border-radius: 999px;
-    background: rgba(245, 166, 35, 0.16);
-    border: 1px solid rgba(245, 166, 35, 0.35);
-    color: #ffd087;
-    font-size: 0.76rem;
-    letter-spacing: 1.2px;
-    text-transform: uppercase;
-}
-
-.hero-pill-row {
-    display: flex;
-    justify-content: center;
-    flex-wrap: wrap;
-    gap: 10px;
-    margin-top: 16px;
-}
-
-.hero-pill {
-    border-radius: 999px;
-    padding: 7px 14px;
-    font-size: 0.8rem;
-    color: #d9e6ff;
-    background: rgba(22, 41, 69, 0.7);
-    border: 1px solid rgba(124, 155, 196, 0.4);
-}
-
-.engine-header {
-    position: relative;
-    z-index: 2;
-    text-align: center;
-    margin-bottom: 16px;
-}
-.engine-header h1 {
-    margin: 0;
-    font-size: clamp(2rem, 4vw, 3rem);
-    line-height: 1;
-    letter-spacing: 2px;
-    color: #f5f7ff;
-}
-.engine-header p {
-    margin: 8px 0 0;
-    color: #7bb49c;
-    font-weight: 600;
-    letter-spacing: 1.2px;
-    text-transform: uppercase;
-    font-size: 0.82rem;
-}
-
-.field-container {
-    position: relative;
-    z-index: 2;
-    display: flex;
-    justify-content: center;
-}
-.football-chess-board {
-    width: min(540px, 95vw);
-    aspect-ratio: 1 / 1;
-    border-radius: 14px;
-    overflow: hidden;
-    border: 3px solid #2f7e58;
-    display: grid;
-    grid-template-columns: repeat(8, 1fr);
-    background: #0d3d2d;
-}
-.football-chess-board .square {
-    border: 1px solid rgba(255,255,255,0.07);
-}
-.football-chess-board .square:nth-child(16n + 1),
-.football-chess-board .square:nth-child(16n + 3),
-.football-chess-board .square:nth-child(16n + 5),
-.football-chess-board .square:nth-child(16n + 7),
-.football-chess-board .square:nth-child(16n + 10),
-.football-chess-board .square:nth-child(16n + 12),
-.football-chess-board .square:nth-child(16n + 14),
-.football-chess-board .square:nth-child(16n + 16) {
-    background: rgba(108, 191, 125, 0.55);
-}
-.football-chess-board .square:nth-child(16n + 2),
-.football-chess-board .square:nth-child(16n + 4),
-.football-chess-board .square:nth-child(16n + 6),
-.football-chess-board .square:nth-child(16n + 8),
-.football-chess-board .square:nth-child(16n + 9),
-.football-chess-board .square:nth-child(16n + 11),
-.football-chess-board .square:nth-child(16n + 13),
-.football-chess-board .square:nth-child(16n + 15) {
-    background: rgba(67, 149, 93, 0.62);
-}
 
 @media (max-width: 900px) {
-    .manager-hero {
-        min-height: 220px;
-    }
-
-    .logo-shell {
-        margin-top: -44px;
+    .landing-shell {
+        margin-top: 38px;
+        padding: 30px 20px;
     }
 }
 </style>
@@ -335,32 +274,79 @@ def best_player_match(dataframe: pd.DataFrame, query: str):
     return fallback.iloc[0] if not fallback.empty else None
 
 
-def player_attribute_pie(dataframe: pd.DataFrame, player_row, tactic_col: str):
-    quality = float(player_row.get("quality_final", 0.0)) * 100
-    tactic_fit = float(player_row.get(tactic_col, 0.0)) * 100
+def _to_float(value):
+    parsed = pd.to_numeric(pd.Series([value]), errors="coerce").iloc[0]
+    return None if pd.isna(parsed) else float(parsed)
 
-    value_series = pd.to_numeric(dataframe["final_value"], errors="coerce").fillna(0)
-    value_rank_pct = float(value_series.rank(pct=True).loc[player_row.name] * 100)
 
-    alt_positions = [p.strip() for p in str(player_row.get("alt_position", "")).split(",") if p.strip()]
-    versatility = min(len(alt_positions) * 25, 100)
+def _first_valid_metric_col(dataframe: pd.DataFrame, candidates):
+    for col in candidates:
+        if col in dataframe.columns:
+            series = pd.to_numeric(dataframe[col], errors="coerce")
+            if series.notna().sum() > 0:
+                return col
+    return None
 
-    labels = ["Quality", "Tactic Fit", "Value Rank", "Versatility"]
-    values = [quality, tactic_fit, value_rank_pct, versatility]
-    colors = ["#f5a623", "#4cd137", "#4da3ff", "#ff6b6b"]
 
-    fig, ax = plt.subplots(figsize=(4.3, 4.3), facecolor="#0d0d1a")
-    ax.pie(
-        values,
-        labels=labels,
-        colors=colors,
-        autopct="%1.0f%%",
-        startangle=90,
-        textprops={"color": "white", "fontsize": 9},
-        wedgeprops={"linewidth": 1, "edgecolor": "#0d0d1a"},
-    )
-    ax.set_title(f"{player_row['Player']} Attribute Profile", color="white", fontsize=11)
-    return fig
+def build_position_profile(dataframe: pd.DataFrame, player_row):
+    position = str(player_row.get("position", "")).strip()
+
+    metric_map = {
+        "MF": [
+            ("Progressive Passes", ["PrgP_stats_passing", "PrgP", "PrgP_p90"]),
+            ("Key Passes", ["KP_p90", "KP"]),
+            ("Shot-Creating Actions", ["SCA90", "SCA_p90", "SCA"]),
+            ("Progressive Carries", ["PrgC_p90", "PrgC"]),
+            ("Pressing", ["press_score", "pct_press_score"]),
+        ],
+        "DF": [
+            ("Tackles Won", ["TklW_p90", "TklW"]),
+            ("Interceptions", ["Int_p90", "Int"]),
+            ("Clearances", ["Clr_p90", "Clr"]),
+            ("Aerial Duels Won", ["Won_p90", "Won", "aerial_score"]),
+            ("Pass Completion", ["Cmp%"]),
+        ],
+        "FW": [
+            ("Expected Goals", ["xG_p90", "xG"]),
+            ("Shots on Target", ["SoT/90", "SoT"]),
+            ("Goal-Creating Actions", ["GCA90", "GCA"]),
+            ("Progressive Carries", ["PrgC_p90", "PrgC"]),
+            ("Pressing", ["press_score", "pct_press_score"]),
+        ],
+        "GK": [
+            ("Save Percentage", ["Save%", "pct_Save%"]),
+            ("Post-Shot xG", ["PSxG"]),
+            ("PSxG +/-", ["PSxG+/-,", "PSxG+/-", "pct_PSxG+/-"]),
+            ("Passing Completion", ["Cmp%_stats_keeper_adv", "Cmp%"]),
+            ("Aerial Control", ["aerial_score", "Won%"]),
+        ],
+    }
+
+    selected = metric_map.get(position, metric_map["MF"])
+    rows = []
+    for label, options in selected:
+        col = _first_valid_metric_col(dataframe, options)
+        if not col:
+            continue
+
+        value = _to_float(player_row.get(col))
+        if value is None:
+            continue
+
+        series = pd.to_numeric(dataframe[col], errors="coerce")
+        if player_row.name in series.index and pd.notna(series.loc[player_row.name]):
+            percentile = float(series.rank(pct=True).loc[player_row.name] * 100)
+        else:
+            percentile = 50.0
+
+        rows.append({
+            "label": label,
+            "value": value,
+            "percentile": max(0.0, min(100.0, percentile)),
+            "column": col,
+        })
+
+    return rows
 
 
 def create_draft_state(formation, p1_tactic, p2_tactic, budget_per_team, dataframe):
@@ -389,8 +375,26 @@ def draft_pick_label(row, tactic_col):
 
 df = get_data()
 
+bg_img = image_to_data_uri("epl_greatest-football-managers.avif")
+if bg_img:
+    st.markdown(
+        f"""
+        <style>
+        .stApp {{
+            background: linear-gradient(rgba(7, 11, 19, 0.38), rgba(7, 11, 19, 0.58)),
+                        url('{bg_img}') center center / cover fixed no-repeat;
+        }}
+        [data-testid="stSidebar"] {{
+            background-color: rgba(14, 20, 33, 0.86) !important;
+            backdrop-filter: blur(6px);
+        }}
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
 st.sidebar.markdown("<h1 style='text-align: center; color: #f5a623;'>Build My XI</h1>", unsafe_allow_html=True)
-st.sidebar.markdown("<p style='text-align: center; color: #888; margin-bottom: 20px;'>AI-Powered Squad Optimizer</p>", unsafe_allow_html=True)
+st.sidebar.markdown("<p style='text-align: center; color: #95a3bd; margin-bottom: 20px;'>Professional Squad Builder</p>", unsafe_allow_html=True)
 
 with st.sidebar:
     mode = st.radio("Game Mode", ["Solo Optimizer", "PvP Draft"], index=0)
@@ -402,12 +406,12 @@ if mode == "Solo Optimizer":
         tactic = st.selectbox("Tactic", list(TACTIC_COL.keys()), index=0)
 
         st.markdown("<br>", unsafe_allow_html=True)
-        use_llm_weights = st.checkbox("Let Gemini choose objective weights", value=False)
-        weight_prompt = st.text_area(
-            "Weight preference prompt",
-            value="Prioritize balanced play with slight emphasis on tactical suitability.",
-            help="Describe what kind of squad profile you want. Gemini will return quality/tactic weights as JSON.",
-            disabled=not use_llm_weights,
+        use_ai_analyst = st.checkbox("Use AI analyst for squad decisions", value=True)
+        analyst_prompt = st.text_area(
+            "Squad request",
+            value="Build a balanced XI with tactical control and strong midfield progression.",
+            help="Example: 'I want an all Real Madrid team with aggressive pressing.'",
+            disabled=not use_ai_analyst,
         )
 
         st.markdown("<br>", unsafe_allow_html=True)
@@ -420,99 +424,95 @@ if mode == "Solo Optimizer":
         optimize_btn = st.button("Generate Optimal XI")
 
     if not optimize_btn and "squad" not in st.session_state:
-        hero_img = (
-            image_to_data_uri("epl_greatest-football-managers.avif")
-            or image_to_data_uri("assets/front-managers.jpg")
-        )
-        logo_img = image_to_data_uri("assets/buildmyxi-logo.png")
-
-        board_squares = "".join(["<div class='square'></div>" for _ in range(64)])
-        hero_class = "manager-hero has-image" if hero_img else "manager-hero"
-        hero_style = f"style=\"background-image: url('{hero_img}')\"" if hero_img else ""
-        logo_markup = (
-            f"<img class='logo-image' src='{logo_img}' alt='Build My XI logo' />"
-            if logo_img
-            else "<div class='logo-fallback'>BUILD MY XI</div>"
-        )
-        asset_hint = (
-            ""
-            if (hero_img and logo_img)
-            else "<p class='asset-hint'>Add buildmyxi-logo.png in assets to fully brand this hero section.</p>"
-        )
-
         st.markdown(
             """
-            <div style='text-align: center; padding: 74px 0 40px;'>
-                <span class='hero-kicker'>Next Gen Squad Lab</span>
-                <h1 style='font-size: 3.2rem; color: #fff;'>Build your <span style='color: #f5a623;'>Dream XI</span></h1>
-                <p style='font-size: 1.05rem; color: #9fb2ca; max-width: 700px; margin: 0 auto;'>
-                    Choose your formation, lock your tactical identity, set budget constraints, and generate your best mathematically valid XI.
-                </p>
-                <div class='hero-pill-row'>
-                    <span class='hero-pill'>LLM-Tuned Weights</span>
-                    <span class='hero-pill'>Draft PvP Arena</span>
-                    <span class='hero-pill'>Constraint-Safe XI</span>
+            <div class='landing-shell'>
+                <span class='landing-kicker'>Tactical Interface</span>
+                <h1>Build My XI</h1>
+                <p>Shape your identity, tune constraints, and generate a next-generation XI with analyst-grade intelligence.</p>
+                <div class='landing-chip-row'>
+                    <span class='landing-chip'>AI Analyst Strategy</span>
+                    <span class='landing-chip'>Prompt-Based Club Requests</span>
+                    <span class='landing-chip'>Pundit Match Review</span>
                 </div>
             </div>
             """,
             unsafe_allow_html=True,
         )
 
-        st.markdown(
-            f"""
-            <div class="tactical-engine-container">
-              <div class="manager-bg"></div>
-              <div class="{hero_class}" {hero_style}></div>
-              <div class="logo-shell">{logo_markup}</div>
-              {asset_hint}
-              <header class="engine-header">
-                <h1>BUILD MY XI</h1>
-                <p>TACTICAL ENGINE FOR FOOTBALL CHESS</p>
-              </header>
-              <div class="field-container">
-                <div class="football-chess-board">{board_squares}</div>
-              </div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-
     if optimize_btn:
-        selected_weights = {"quality_weight": 0.60, "tactic_weight": 0.40, "source": "default"}
-        if use_llm_weights:
-            selected_weights = decide_weights_with_gemini(weight_prompt, df.columns.tolist())
+        strategy = {
+            "quality_weight": 0.60,
+            "tactic_weight": 0.40,
+            "required_club": None,
+            "preferred_clubs": [],
+            "avoid_clubs": [],
+            "formation_override": None,
+            "tactic_override": None,
+            "analyst_notes": "Using default optimization settings.",
+            "source": "fallback",
+        }
+
+        effective_formation = formation
+        effective_tactic = tactic
+        if use_ai_analyst:
+            strategy = decide_squad_strategy_with_gemini(
+                analyst_prompt,
+                df,
+                list(TACTIC_COL.keys()),
+                list(FORMATIONS.keys()),
+            )
+            if strategy.get("formation_override"):
+                effective_formation = strategy["formation_override"]
+            if strategy.get("tactic_override"):
+                effective_tactic = strategy["tactic_override"]
 
         with st.spinner("Analyzing players and solving constraints..."):
+            effective_max_per_club = 11 if strategy.get("required_club") else max_per_club
             result, status = optimize(
                 df,
-                formation,
-                tactic,
+                effective_formation,
+                effective_tactic,
                 budget,
-                max_per_club,
-                quality_weight=selected_weights["quality_weight"],
-                tactic_weight=selected_weights["tactic_weight"],
+                effective_max_per_club,
+                quality_weight=strategy["quality_weight"],
+                tactic_weight=strategy["tactic_weight"],
+                required_club=strategy.get("required_club"),
+                preferred_clubs=strategy.get("preferred_clubs", []),
+                avoid_clubs=strategy.get("avoid_clubs", []),
             )
         if result is None:
             st.error("Could not find a valid squad with those constraints.")
             st.info(f"Solver returned: {status}")
         else:
             st.session_state["squad"] = result
-            st.session_state["formation"] = formation
-            st.session_state["tactic"] = tactic
-            st.session_state["objective_weights"] = selected_weights
+            st.session_state["formation"] = effective_formation
+            st.session_state["tactic"] = effective_tactic
+            st.session_state["analyst_strategy"] = strategy
+            st.session_state["analyst_prompt"] = analyst_prompt
+
+            if use_ai_analyst:
+                review = pundit_review_with_gemini(
+                    analyst_prompt,
+                    effective_formation,
+                    effective_tactic,
+                    pd.DataFrame(result),
+                )
+                st.session_state["pundit_review"] = review
 
     if "squad" in st.session_state:
         result = st.session_state["squad"]
         tactic_col = TACTIC_COL[st.session_state["tactic"]]
         result_df = pd.DataFrame(result)
 
-        if "objective_weights" in st.session_state:
-            w = st.session_state["objective_weights"]
+        if "analyst_strategy" in st.session_state:
+            s = st.session_state["analyst_strategy"]
+            club_rule = s.get("required_club") or ", ".join(s.get("preferred_clubs", [])[:2]) or "none"
             st.caption(
-                f"Objective weights ({w.get('source', 'unknown')}): "
-                f"quality={float(w.get('quality_weight', 0.6)):.2f}, "
-                f"tactic={float(w.get('tactic_weight', 0.4)):.2f}. "
-                f"{w.get('rationale', '')}"
+                "Analyst plan: "
+                f"quality={float(s.get('quality_weight', 0.6)):.2f}, "
+                f"tactic={float(s.get('tactic_weight', 0.4)):.2f}, "
+                f"club focus={club_rule}"
             )
 
         total_val = result_df["value"].sum() / 1e6
@@ -535,7 +535,7 @@ if mode == "Solo Optimizer":
         if search_query:
             matched = best_player_match(df, search_query)
             if matched is not None:
-                info_col, pie_col = st.columns([1.1, 1])
+                info_col, stat_col = st.columns([1.05, 1.35])
                 with info_col:
                     st.markdown(
                         f"""
@@ -548,26 +548,22 @@ if mode == "Solo Optimizer":
                         """,
                         unsafe_allow_html=True,
                     )
-                with pie_col:
-                    st.pyplot(player_attribute_pie(df, matched, tactic_col), use_container_width=True)
+
+                with stat_col:
+                    st.markdown("<h4 style='color:#f5a623; margin-bottom: 6px;'>Position Profile</h4>", unsafe_allow_html=True)
+                    profile_rows = build_position_profile(df, matched)
+                    if not profile_rows:
+                        st.info("Detailed profile stats are unavailable for this player.")
+                    else:
+                        for row in profile_rows:
+                            st.markdown(
+                                f"<p style='margin: 0 0 3px; color:#d7e1f5;'><strong>{row['label']}</strong> "
+                                f"<span style='color:#9fb2ca;'>({row['value']:.2f})</span></p>",
+                                unsafe_allow_html=True,
+                            )
+                            st.progress(row["percentile"] / 100.0, text=f"{row['percentile']:.0f}th percentile")
             else:
                 st.warning("No close player match found.")
-
-        st.markdown("<h3 style='color: #f5a623;'>XI Share by Combined Score</h3>", unsafe_allow_html=True)
-        combined = (0.60 * result_df["quality"] + 0.40 * result_df["tactic_fit"]).clip(lower=0)
-        labels = [name.split()[-1] for name in result_df["Player"].tolist()]
-        fig_team, ax_team = plt.subplots(figsize=(6, 6), facecolor="#0d0d1a")
-        ax_team.pie(
-            combined,
-            labels=labels,
-            autopct="%1.1f%%",
-            startangle=90,
-            pctdistance=0.78,
-            textprops={"color": "white", "fontsize": 8},
-            wedgeprops={"linewidth": 1, "edgecolor": "#0d0d1a"},
-        )
-        ax_team.set_title("Combined Quality + Tactic Contribution", color="white", fontsize=11)
-        st.pyplot(fig_team, use_container_width=True)
 
         col_pitch, col_grid = st.columns([1.2, 1])
         with col_pitch:
@@ -595,6 +591,13 @@ if mode == "Solo Optimizer":
                             """,
                             unsafe_allow_html=True,
                         )
+
+        if "pundit_review" in st.session_state:
+            st.markdown("<h3 style='color: #f5a623; margin-top: 16px;'>Pundit Review</h3>", unsafe_allow_html=True)
+            st.markdown(
+                f"<div class='player-card' style='text-align:left; line-height:1.6;'>{st.session_state['pundit_review']}</div>",
+                unsafe_allow_html=True,
+            )
 
 elif mode == "PvP Draft":
     with st.sidebar:
@@ -769,5 +772,4 @@ elif mode == "PvP Draft":
             with result_cols[2]:
                 st.markdown(f"<div class='metric-card'><div class='metric-value'>{winner}</div><div class='metric-label'>Winner</div></div>", unsafe_allow_html=True)
 
-st.markdown("---")
-st.caption("Data Source: FBref 2024-25 | Transfermarkt Market Values | 1955 Players Analyzed")
+st.markdown("<div class='fixed-footer'>Data Source: FBref 2024-25 | Transfermarkt Market Values</div>", unsafe_allow_html=True)

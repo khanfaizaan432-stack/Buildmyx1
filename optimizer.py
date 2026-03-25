@@ -63,16 +63,60 @@ def is_eligible(player_row, slot):
     return False
 
 
-def optimize(df, formation, tactic, budget, max_per_club, quality_weight=None, tactic_weight=None):
+def is_eligible_relaxed(player_row, slot):
+    """
+    Relaxed eligibility used for hard single-club requests.
+    Keeps GK/outfield separation but ignores sub_position whitelist.
+    """
+    primary = str(player_row.get("position", "")).strip()
+    alt = str(player_row.get("alt_position", "")).strip()
+
+    if primary == "GK":
+        return slot == "GK"
+
+    if slot == "GK":
+        return False
+
+    # Any outfield player can fill any outfield slot in relaxed mode.
+    return True
+
+
+def optimize(
+    df,
+    formation,
+    tactic,
+    budget,
+    max_per_club,
+    quality_weight=None,
+    tactic_weight=None,
+    required_club=None,
+    preferred_clubs=None,
+    avoid_clubs=None,
+):
     tactic_col   = TACTIC_COL[tactic]
     slots_needed = FORMATIONS[formation]
     q_weight, t_weight = _resolved_weights(quality_weight, tactic_weight)
 
-    # pre-filter
+    # pre-filter; for hard single-club requests we can relax floors if needed.
+    quality_floor = 0.40
+    fit_floor = 0.35
     eligible = df[
-        (df["quality_final"] >= 0.40) &
-        (df[tactic_col] >= 0.35)
+        (df["quality_final"] >= quality_floor) &
+        (df[tactic_col] >= fit_floor)
     ].copy()
+
+    if avoid_clubs:
+        avoid_set = {str(c).strip() for c in avoid_clubs if str(c).strip()}
+        if avoid_set:
+            eligible = eligible[~eligible["Squad"].isin(avoid_set)].copy()
+
+    if required_club:
+        required_club = str(required_club).strip()
+        eligible = eligible[eligible["Squad"] == required_club].copy()
+
+        # If strict floors remove too many candidates for a full XI, relax floors.
+        if len(eligible) < 11:
+            eligible = df[df["Squad"] == required_club].copy()
 
     eligible = eligible.reset_index(drop=True)
     n = len(eligible)
@@ -96,11 +140,14 @@ def optimize(df, formation, tactic, budget, max_per_club, quality_weight=None, t
     # objective: maximize quality + tactic fit
     # (Chemistry and synergy are computed post-optimization)
     obj_terms = []
+    preferred_set = {str(c).strip() for c in (preferred_clubs or []) if str(c).strip()}
     for i in range(n):
         row = eligible.loc[i]
         quality    = float(row["quality_final"])
         tactic_fit = float(row[tactic_col])
         score = q_weight * quality + t_weight * tactic_fit
+        if preferred_set and str(row.get("Squad", "")).strip() in preferred_set:
+            score += 0.03
 
         for s in range(S):
             obj_terms.append(score * x[i][s])
@@ -116,9 +163,10 @@ def optimize(df, formation, tactic, budget, max_per_club, quality_weight=None, t
         prob += lpSum(x[i][s] for s in range(S)) <= 1
 
     # constraint 3: position eligibility
+    eligibility_fn = is_eligible_relaxed if required_club else is_eligible
     for i in range(n):
         for s, slot in enumerate(slot_types):
-            if not is_eligible(eligible.loc[i], slot):
+            if not eligibility_fn(eligible.loc[i], slot):
                 prob += x[i][s] == 0
 
     # constraint 4: budget
