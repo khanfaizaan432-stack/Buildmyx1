@@ -1,10 +1,10 @@
-﻿# Build My XI â€” PvP Football Draft Game
+﻿# Build My XI PvP Football Draft Game
 
 A competitive head-to-head football squad builder where two players draft XIs against each other, each secretly picks a tactic, and the winner is decided by how well their squad fits their chosen tactic. Think Chess.com meets fantasy football.
 
 ## Current Status
 
-### âœ“ Mode 1: Solo Optimizer (FULLY IMPLEMENTED)
+### Mode 1: Solo Optimizer (FULLY IMPLEMENTED)
 - Select formation, tactic, budget, and max per club constraints
 - AI finds mathematically optimal 11-player squad using Integer Linear Programming
 - Visualizes squad on an interactive football pitch
