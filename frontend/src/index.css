@@ -1,0 +1,138 @@
+@font-face {
+  font-family: "BricolageGrotesque";
+  src: url("/assets/fonts/BricolageGrotesque.woff2") format("woff2");
+  font-weight: 200 800;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "GeneralSans";
+  src: url("/assets/fonts/GeneralSans.woff2") format("woff2");
+  font-weight: 200 700;
+  font-display: swap;
+}
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --color-navy: #050d14;
+    --color-navy-card: #0a1628;
+    --color-green: #27a356;
+    --color-blue: #2979ff;
+    --color-gold: #f5c518;
+    --color-border: #1a2540;
+    --color-muted-text: #8899aa;
+  }
+}
+
+@layer base {
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background-color: var(--color-navy);
+    color: #ffffff;
+    font-family: "GeneralSans", system-ui, sans-serif;
+  }
+  h1, h2, h3, h4 {
+    font-family: "BricolageGrotesque", system-ui, sans-serif;
+  }
+}
+
+@layer utilities {
+  .glass-card {
+    background: rgba(10, 22, 40, 0.8);
+    backdrop-filter: blur(16px);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 8px;
+  }
+  .stat-bar-track {
+    background: rgba(255,255,255,0.08);
+    border-radius: 4px;
+    height: 5px;
+    overflow: hidden;
+    flex: 1;
+  }
+  .stat-bar-fill {
+    background: linear-gradient(90deg, var(--color-green), #4cde82);
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.4s ease;
+  }
+  .btn-primary {
+    background: linear-gradient(135deg, #27a356 0%, #00c853 100%);
+    color: #fff;
+    font-weight: 800;
+    padding: 0.625rem 1.5rem;
+    border-radius: 4px;
+    border: none;
+    cursor: pointer;
+    transition: filter 0.2s, transform 0.15s;
+    font-family: "BricolageGrotesque", sans-serif;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    font-size: 0.85rem;
+    box-shadow: 0 4px 16px rgba(39,163,86,0.3);
+  }
+  .btn-primary:hover { filter: brightness(1.12); transform: translateY(-1px); }
+  .btn-primary:disabled { opacity: 0.35; cursor: not-allowed; transform: none; filter: none; }
+  .btn-secondary {
+    background: transparent;
+    color: rgba(255,255,255,0.7);
+    font-weight: 800;
+    padding: 0.625rem 1.5rem;
+    border-radius: 4px;
+    border: 1px solid rgba(255,255,255,0.2);
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: "BricolageGrotesque", sans-serif;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    font-size: 0.85rem;
+  }
+  .btn-secondary:hover { border-color: rgba(255,255,255,0.6); color: #fff; transform: translateY(-1px); }
+  .pos-badge {
+    display: inline-block;
+    font-size: 0.62rem;
+    font-weight: 800;
+    padding: 0.18rem 0.5rem;
+    border-radius: 3px;
+    letter-spacing: 0.08em;
+    font-family: "BricolageGrotesque", sans-serif;
+  }
+  .pos-GK { background: rgba(245,197,24,0.2); color: var(--color-gold); border: 1px solid rgba(245,197,24,0.4); }
+  .pos-DF { background: rgba(41,121,255,0.2); color: #2979ff; border: 1px solid rgba(41,121,255,0.4); }
+  .pos-MF { background: rgba(39,163,86,0.2); color: var(--color-green); border: 1px solid rgba(39,163,86,0.4); }
+  .pos-FW { background: rgba(255,82,82,0.2); color: #ff5252; border: 1px solid rgba(255,82,82,0.4); }
+  .step-badge {
+    background: var(--color-gold);
+    color: #000;
+    font-size: 0.68rem;
+    font-weight: 800;
+    padding: 0.25rem 0.75rem;
+    border-radius: 2px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    font-family: "BricolageGrotesque", sans-serif;
+  }
+  .step-title {
+    font-family: "BricolageGrotesque", sans-serif;
+    font-weight: 700;
+    font-size: 1rem;
+    color: #fff;
+    letter-spacing: 0.05em;
+  }
+  .back-btn {
+    background: transparent;
+    border: 1px solid rgba(255,255,255,0.2);
+    color: rgba(255,255,255,0.6);
+    padding: 0.4rem 1rem;
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: "BricolageGrotesque", sans-serif;
+    font-size: 0.85rem;
+    transition: all 0.2s;
+  }
+  .back-btn:hover { border-color: #fff; color: #fff; }
+}

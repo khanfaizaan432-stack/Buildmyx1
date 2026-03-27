@@ -1,0 +1,7 @@
+# Tailwind CSS placeholder
+# Install tailwind if needed:
+# npm install -D tailwindcss postcss autoprefixer
+# npx tailwindcss init -p
+
+node_modules/
+dist/

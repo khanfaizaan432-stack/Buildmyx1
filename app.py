@@ -15,9 +15,10 @@ from draft import (
     get_eligible_players,
     remaining_slots,
 )
+from ai_agents import run_analyst_agent, run_coach_agent, run_pundit_agent
 from llm_weights import (
     decide_squad_strategy_with_gemini,
-    pundit_review_with_gemini,
+    review_lineup_with_score_with_gemini,
 )
 from optimizer import optimize
 from pitch_viz import draw_pitch
@@ -374,6 +375,7 @@ def draft_pick_label(row, tactic_col):
 
 
 df = get_data()
+club_options = sorted({str(c).strip() for c in df.get("Squad", []) if str(c).strip()})
 
 bg_img = image_to_data_uri("epl_greatest-football-managers.avif")
 if bg_img:
@@ -404,14 +406,39 @@ if mode == "Solo Optimizer":
     with st.sidebar:
         formation = st.selectbox("Formation", list(FORMATIONS.keys()), index=0)
         tactic = st.selectbox("Tactic", list(TACTIC_COL.keys()), index=0)
+        lock_sidebar_shape = st.checkbox("Lock formation and tactic to my sidebar picks", value=True)
 
         st.markdown("<br>", unsafe_allow_html=True)
-        use_ai_analyst = st.checkbox("Use AI analyst for squad decisions", value=True)
+        manual_design_mode = st.checkbox("Manual design mode (my rules first)", value=False)
+
+        quality_weight_pct = 60
+        required_club_manual = "None"
+        preferred_clubs_manual = []
+        avoid_clubs_manual = []
+        if manual_design_mode:
+            quality_weight_pct = st.slider("Quality priority (%)", 0, 100, 60, 5)
+            required_club_manual = st.selectbox(
+                "Require all players from one club (optional)",
+                ["None"] + club_options,
+                index=0,
+            )
+            preferred_clubs_manual = st.multiselect(
+                "Prefer players from clubs",
+                club_options,
+                default=[],
+            )
+            avoid_clubs_manual = st.multiselect(
+                "Avoid players from clubs",
+                club_options,
+                default=[],
+            )
+
+        st.markdown("<br>", unsafe_allow_html=True)
+        st.caption("Manager Gemini runs first automatically. If unavailable, the app falls back to deterministic strategy.")
         analyst_prompt = st.text_area(
             "Squad request",
             value="Build a balanced XI with tactical control and strong midfield progression.",
             help="Example: 'I want an all Real Madrid team with aggressive pressing.'",
-            disabled=not use_ai_analyst,
         )
 
         st.markdown("<br>", unsafe_allow_html=True)
@@ -449,56 +476,157 @@ if mode == "Solo Optimizer":
             "avoid_clubs": [],
             "formation_override": None,
             "tactic_override": None,
-            "analyst_notes": "Using default optimization settings.",
+            "analyst_notes": "Using deterministic fallback strategy.",
             "source": "fallback",
         }
 
+        manual_constraints_note = ""
+        if manual_design_mode:
+            required_club = None if required_club_manual == "None" else required_club_manual
+            preferred_manual = [c for c in preferred_clubs_manual if c != required_club]
+            avoid_manual = [c for c in avoid_clubs_manual if c != required_club and c not in preferred_manual]
+            manual_constraints_note = (
+                "\n\nManual controls selected by user: "
+                f"quality_priority={quality_weight_pct}%, "
+                f"required_club={required_club or 'None'}, "
+                f"preferred={preferred_manual}, avoid={avoid_manual}."
+            )
+
         effective_formation = formation
         effective_tactic = tactic
-        if use_ai_analyst:
-            strategy = decide_squad_strategy_with_gemini(
-                analyst_prompt,
-                df,
-                list(TACTIC_COL.keys()),
-                list(FORMATIONS.keys()),
+        manager_prompt = f"{analyst_prompt.strip() or 'Build a strong XI.'}{manual_constraints_note}"
+        manager_strategy = decide_squad_strategy_with_gemini(
+            manager_prompt,
+            df,
+            list(TACTIC_COL.keys()),
+            list(FORMATIONS.keys()),
+        )
+        strategy = dict(manager_strategy)
+
+        if manual_design_mode:
+            required_club = None if required_club_manual == "None" else required_club_manual
+            preferred_manual = [c for c in preferred_clubs_manual if c != required_club]
+            avoid_manual = [c for c in avoid_clubs_manual if c != required_club and c not in preferred_manual]
+            quality_w = quality_weight_pct / 100.0
+            strategy["quality_weight"] = quality_w
+            strategy["tactic_weight"] = 1.0 - quality_w
+            strategy["required_club"] = required_club
+            strategy["preferred_clubs"] = preferred_manual
+            strategy["avoid_clubs"] = avoid_manual
+            strategy["analyst_notes"] = (
+                f"Manager Gemini source={manager_strategy.get('source', 'fallback')}; "
+                "manual controls enforced as hard constraints."
             )
-            if strategy.get("formation_override"):
-                effective_formation = strategy["formation_override"]
-            if strategy.get("tactic_override"):
-                effective_tactic = strategy["tactic_override"]
+            strategy["source"] = "manager+manual"
+
+        if strategy.get("formation_override") and not lock_sidebar_shape:
+            effective_formation = strategy["formation_override"]
+        if strategy.get("tactic_override") and not lock_sidebar_shape:
+            effective_tactic = strategy["tactic_override"]
+
+        effective_max_per_club = 11 if strategy.get("required_club") else max_per_club
+        active_strategy = dict(strategy)
+        result = None
+        status = "Unknown"
+        applied_fallback = None
+
+        attempts = [
+            {
+                "label": "primary",
+                "formation": effective_formation,
+                "tactic": effective_tactic,
+                "max_per_club": effective_max_per_club,
+                "strategy": dict(active_strategy),
+            }
+        ]
+
+        if strategy.get("required_club") or strategy.get("preferred_clubs") or strategy.get("avoid_clubs"):
+            relaxed_strategy = dict(active_strategy)
+            relaxed_strategy["required_club"] = None
+            relaxed_strategy["preferred_clubs"] = []
+            relaxed_strategy["avoid_clubs"] = []
+            attempts.append(
+                {
+                    "label": "relaxed-club-constraints",
+                    "formation": effective_formation,
+                    "tactic": effective_tactic,
+                    "max_per_club": max_per_club,
+                    "strategy": relaxed_strategy,
+                }
+            )
+
+        if max_per_club < 5:
+            attempts.append(
+                {
+                    "label": "higher-club-cap",
+                    "formation": effective_formation,
+                    "tactic": effective_tactic,
+                    "max_per_club": 5,
+                    "strategy": dict(active_strategy),
+                }
+            )
+
+        if effective_formation != formation or effective_tactic != tactic:
+            fallback_strategy = dict(active_strategy)
+            fallback_strategy["required_club"] = None
+            fallback_strategy["preferred_clubs"] = []
+            fallback_strategy["avoid_clubs"] = []
+            attempts.append(
+                {
+                    "label": "sidebar-defaults",
+                    "formation": formation,
+                    "tactic": tactic,
+                    "max_per_club": max_per_club,
+                    "strategy": fallback_strategy,
+                }
+            )
 
         with st.spinner("Analyzing players and solving constraints..."):
-            effective_max_per_club = 11 if strategy.get("required_club") else max_per_club
-            result, status = optimize(
-                df,
-                effective_formation,
-                effective_tactic,
-                budget,
-                effective_max_per_club,
-                quality_weight=strategy["quality_weight"],
-                tactic_weight=strategy["tactic_weight"],
-                required_club=strategy.get("required_club"),
-                preferred_clubs=strategy.get("preferred_clubs", []),
-                avoid_clubs=strategy.get("avoid_clubs", []),
-            )
+            for attempt in attempts:
+                trial_strategy = attempt["strategy"]
+                result, status = optimize(
+                    df,
+                    attempt["formation"],
+                    attempt["tactic"],
+                    budget,
+                    attempt["max_per_club"],
+                    quality_weight=trial_strategy["quality_weight"],
+                    tactic_weight=trial_strategy["tactic_weight"],
+                    required_club=trial_strategy.get("required_club"),
+                    preferred_clubs=trial_strategy.get("preferred_clubs", []),
+                    avoid_clubs=trial_strategy.get("avoid_clubs", []),
+                )
+                if result is not None:
+                    active_strategy = trial_strategy
+                    effective_formation = attempt["formation"]
+                    effective_tactic = attempt["tactic"]
+                    applied_fallback = None if attempt["label"] == "primary" else attempt["label"]
+                    break
+
         if result is None:
             st.error("Could not find a valid squad with those constraints.")
             st.info(f"Solver returned: {status}")
+            st.caption("Try increasing budget, raising max players per club, or disabling AI analyst club restrictions.")
         else:
             st.session_state["squad"] = result
             st.session_state["formation"] = effective_formation
             st.session_state["tactic"] = effective_tactic
-            st.session_state["analyst_strategy"] = strategy
-            st.session_state["analyst_prompt"] = analyst_prompt
+            st.session_state["analyst_strategy"] = active_strategy
+            st.session_state["analyst_prompt"] = manager_prompt
 
-            if use_ai_analyst:
-                review = pundit_review_with_gemini(
-                    analyst_prompt,
-                    effective_formation,
-                    effective_tactic,
-                    pd.DataFrame(result),
+            if applied_fallback:
+                st.warning(
+                    "Initial constraints were too strict, so fallback mode was used: "
+                    f"{applied_fallback.replace('-', ' ')}."
                 )
-                st.session_state["pundit_review"] = review
+
+            lineup_analysis = review_lineup_with_score_with_gemini(
+                manager_prompt,
+                effective_formation,
+                effective_tactic,
+                pd.DataFrame(result),
+            )
+            st.session_state["lineup_analysis"] = lineup_analysis
 
     if "squad" in st.session_state:
         result = st.session_state["squad"]
@@ -509,10 +637,11 @@ if mode == "Solo Optimizer":
             s = st.session_state["analyst_strategy"]
             club_rule = s.get("required_club") or ", ".join(s.get("preferred_clubs", [])[:2]) or "none"
             st.caption(
-                "Analyst plan: "
+                "Manager plan: "
                 f"quality={float(s.get('quality_weight', 0.6)):.2f}, "
                 f"tactic={float(s.get('tactic_weight', 0.4)):.2f}, "
-                f"club focus={club_rule}"
+                f"club focus={club_rule}, "
+                f"source={s.get('source', 'unknown')}"
             )
 
         total_val = result_df["value"].sum() / 1e6
@@ -592,10 +721,27 @@ if mode == "Solo Optimizer":
                             unsafe_allow_html=True,
                         )
 
-        if "pundit_review" in st.session_state:
-            st.markdown("<h3 style='color: #f5a623; margin-top: 16px;'>Pundit Review</h3>", unsafe_allow_html=True)
+        if "lineup_analysis" in st.session_state:
+            a = st.session_state["lineup_analysis"]
+            st.markdown("<h3 style='color: #f5a623; margin-top: 16px;'>Analyst Scorecard</h3>", unsafe_allow_html=True)
+            score_cols = st.columns(3)
+            with score_cols[0]:
+                st.markdown(
+                    f"<div class='metric-card'><div class='metric-value'>{float(a.get('score_100', 0.0)):.1f}</div><div class='metric-label'>Lineup Score / 100</div></div>",
+                    unsafe_allow_html=True,
+                )
+            with score_cols[1]:
+                st.markdown(
+                    f"<div class='metric-card'><div class='metric-value'>{a.get('verdict', 'N/A')}</div><div class='metric-label'>Verdict</div></div>",
+                    unsafe_allow_html=True,
+                )
+            with score_cols[2]:
+                st.markdown(
+                    f"<div class='metric-card'><div class='metric-value'>{a.get('source', 'unknown')}</div><div class='metric-label'>Analyst Source</div></div>",
+                    unsafe_allow_html=True,
+                )
             st.markdown(
-                f"<div class='player-card' style='text-align:left; line-height:1.6;'>{st.session_state['pundit_review']}</div>",
+                f"<div class='player-card' style='text-align:left; line-height:1.6;'>{a.get('review', 'No analyst review available.')}</div>",
                 unsafe_allow_html=True,
             )
 
@@ -771,5 +917,72 @@ elif mode == "PvP Draft":
                 st.markdown(f"<div class='metric-card'><div class='metric-value'>{p2_score:.2f}</div><div class='metric-label'>P2 Score</div></div>", unsafe_allow_html=True)
             with result_cols[2]:
                 st.markdown(f"<div class='metric-card'><div class='metric-value'>{winner}</div><div class='metric-label'>Winner</div></div>", unsafe_allow_html=True)
+
+            # Trigger multi-agent studio once per completed draft state.
+            p1_names = p1_df["Player"].astype(str).tolist()
+            p2_names = p2_df["Player"].astype(str).tolist()
+            pipeline_signature = (
+                tuple(sorted(state["teams"]["P1"])),
+                tuple(sorted(state["teams"]["P2"])),
+                state["formation"],
+                state["p1_tactic"],
+                state["p2_tactic"],
+                round(float(p1_score), 3),
+                round(float(p2_score), 3),
+            )
+            if st.session_state.get("draft_ai_signature") != pipeline_signature:
+                gemini_api_key = st.secrets.get("GEMINI_API_KEY", None)
+                with st.status("Live from the Studio...", expanded=True) as studio_status:
+                    st.write("The coaches are facing the press...")
+                    p1_budget_spent = float(draft_budget_m * 1_000_000 - state["budgets"]["P1"])
+                    p1_coach_quote = run_coach_agent(
+                        gemini_api_key,
+                        p1_names,
+                        state["formation"],
+                        state["p1_tactic"],
+                        p1_budget_spent,
+                    )
+
+                    st.write("The analyst is crunching tactical data...")
+                    analyst_report = run_analyst_agent(
+                        gemini_api_key,
+                        p1_names,
+                        state["formation"],
+                        state["p1_tactic"],
+                        p2_names,
+                        state["formation"],
+                        state["p2_tactic"],
+                    )
+
+                    st.write("Passing it to the pundit desk...")
+                    pundit_rant = run_pundit_agent(
+                        gemini_api_key,
+                        analyst_report,
+                        winner,
+                        float(p1_score),
+                        float(p2_score),
+                    )
+
+                    st.session_state["draft_ai_bundle"] = {
+                        "p1_coach_quote": p1_coach_quote,
+                        "analyst_report": analyst_report,
+                        "pundit_rant": pundit_rant,
+                    }
+                    st.session_state["draft_ai_signature"] = pipeline_signature
+                    studio_status.update(label="Analysis Complete", state="complete", expanded=False)
+
+            ai_bundle = st.session_state.get("draft_ai_bundle", {})
+            if ai_bundle:
+                st.markdown("---")
+                post_cols = st.columns(2)
+                with post_cols[0]:
+                    st.markdown("### Post-Match Press Conference")
+                    st.info(f"Player 1 Manager:\n\n\"{ai_bundle.get('p1_coach_quote', 'No quote yet.')}\"")
+                with post_cols[1]:
+                    st.markdown("### Live TV Pundit Reaction")
+                    st.success(ai_bundle.get("pundit_rant", "No pundit reaction yet."))
+
+                with st.expander("View the Mastermind Tactical Breakdown"):
+                    st.markdown(ai_bundle.get("analyst_report", "No analyst report yet."))
 
 st.markdown("<div class='fixed-footer'>Data Source: FBref 2024-25 | Transfermarkt Market Values</div>", unsafe_allow_html=True)

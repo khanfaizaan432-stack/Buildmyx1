@@ -1,0 +1,69 @@
+.tactic-page { position: relative; min-height: 100vh; overflow: hidden; }
+.tactic-page-bg {
+  position: fixed; inset: 0;
+  background-image: url("/assets/uploads/epl_greatest-football-managers.avif");
+  background-size: cover; background-position: center;
+  filter: brightness(0.4) saturate(0.7); z-index: 0;
+}
+.tactic-page-overlay {
+  position: fixed; inset: 0;
+  background: linear-gradient(180deg, rgba(5,13,20,0.6) 0%, rgba(5,13,20,0.88) 100%);
+  z-index: 1;
+}
+.tactic-page-inner { position: relative; z-index: 2; min-height: 100vh; display: flex; flex-direction: column; }
+.tactic-topbar {
+  display: flex; align-items: center; gap: 1rem;
+  padding: 1.25rem 1.5rem 1.25rem 5rem;
+  background: rgba(5,13,20,0.6); backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(245,197,24,0.1);
+}
+.tactic-body { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; padding: 2rem 2rem 1rem; flex: 1; }
+.tactic-column { display: flex; flex-direction: column; }
+.column-heading {
+  font-family: "BricolageGrotesque", sans-serif; font-weight: 800; font-style: italic;
+  font-size: 0.8rem; letter-spacing: 0.2em; text-transform: uppercase;
+  color: var(--color-gold); margin: 0 0 1rem;
+}
+.tactic-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.75rem; }
+.tactic-card {
+  background: rgba(10,22,40,0.7); border: 1px solid rgba(255,255,255,0.08);
+  backdrop-filter: blur(12px); border-radius: 8px; padding: 1rem;
+  cursor: pointer; text-align: left; transition: all 0.2s; color: #fff;
+}
+.tactic-card:hover { border-color: rgba(39,163,86,0.5); background: rgba(39,163,86,0.08); transform: translateY(-2px); box-shadow: 0 4px 20px rgba(39,163,86,0.15); }
+.tactic-card--active { border-color: var(--color-green) !important; background: rgba(39,163,86,0.14) !important; box-shadow: 0 0 0 1px var(--color-green), 0 4px 24px rgba(39,163,86,0.25); }
+.tactic-card-name { font-family: "BricolageGrotesque", sans-serif; font-weight: 800; font-size: 0.9rem; color: #fff; margin-bottom: 0.35rem; }
+.tactic-card-desc { font-size: 0.75rem; color: var(--color-muted-text); line-height: 1.4; }
+.formation-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.6rem; margin-bottom: 1.5rem; }
+.formation-card {
+  background: rgba(10,22,40,0.7); border: 1px solid rgba(255,255,255,0.08);
+  backdrop-filter: blur(8px); border-radius: 8px; padding: 0.75rem 0.5rem;
+  cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 0.5rem; transition: all 0.2s;
+}
+.formation-card:hover { border-color: rgba(245,197,24,0.4); transform: translateY(-2px); }
+.formation-card--active { border-color: var(--color-gold) !important; background: rgba(245,197,24,0.08) !important; box-shadow: 0 0 0 1px var(--color-gold); }
+.formation-name { font-family: "BricolageGrotesque", sans-serif; font-weight: 700; font-size: 0.78rem; color: #fff; letter-spacing: 0.05em; }
+.formation-dots { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+.formation-dots-row { display: flex; gap: 3px; justify-content: center; }
+.formation-dot { width: 7px; height: 7px; border-radius: 50%; }
+.formation-dot-GK { background: var(--color-gold); }
+.formation-dot-DF { background: #2979ff; }
+.formation-dot-MF { background: var(--color-green); }
+.formation-dot-FW { background: #ff5252; }
+.sliders-section {
+  background: rgba(10,22,40,0.7); backdrop-filter: blur(12px);
+  border: 1px solid rgba(255,255,255,0.08); border-radius: 8px;
+  padding: 1.25rem; display: flex; flex-direction: column; gap: 1.25rem;
+}
+.slider-row { display: flex; flex-direction: column; }
+.slider-label { display: flex; justify-content: space-between; font-size: 0.82rem; color: rgba(255,255,255,0.7); font-family: "BricolageGrotesque", sans-serif; font-weight: 600; margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.08em; }
+.slider-value { color: var(--color-green); font-weight: 700; }
+.slider-input { width: 100%; accent-color: var(--color-green); cursor: pointer; }
+.slider-range-labels { display: flex; justify-content: space-between; font-size: 0.7rem; color: var(--color-muted-text); margin-top: 0.25rem; }
+.tactic-footer {
+  padding: 1.25rem 2rem; display: flex; align-items: center; gap: 1.5rem;
+  background: rgba(5,13,20,0.8); backdrop-filter: blur(12px);
+  border-top: 1px solid rgba(255,255,255,0.07); position: relative; z-index: 2;
+}
+.tactic-next-btn { min-width: 220px; }
+.tactic-hint { font-size: 0.82rem; color: var(--color-muted-text); }

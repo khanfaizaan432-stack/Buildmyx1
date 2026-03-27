@@ -1,0 +1,59 @@
+.squad-page { position: relative; min-height: 100vh; overflow: hidden; }
+.squad-page-bg {
+  position: fixed; inset: 0;
+  background-image: url("/assets/uploads/epl_greatest-football-managers.avif");
+  background-size: cover; background-position: center top;
+  filter: brightness(0.35) saturate(0.8); z-index: 0;
+}
+.squad-page-overlay {
+  position: fixed; inset: 0;
+  background: linear-gradient(180deg, rgba(5,13,20,0.65) 0%, rgba(5,13,20,0.9) 100%);
+  z-index: 1;
+}
+.squad-page-inner { position: relative; z-index: 2; min-height: 100vh; display: flex; flex-direction: column; }
+.squad-topbar { display: flex; align-items: center; gap: 0.75rem; padding: 1.25rem 1.5rem 1.25rem 5rem; background: rgba(5,13,20,0.6); backdrop-filter: blur(12px); border-bottom: 1px solid rgba(245,197,24,0.1); flex-wrap: wrap; }
+.tactic-pill { background: rgba(39,163,86,0.15); border: 1px solid rgba(39,163,86,0.4); color: var(--color-green); font-size: 0.72rem; font-weight: 700; padding: 0.2rem 0.6rem; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.08em; font-family: "BricolageGrotesque", sans-serif; }
+.formation-pill { background: rgba(245,197,24,0.1); border: 1px solid rgba(245,197,24,0.3); color: var(--color-gold); font-size: 0.72rem; font-weight: 700; padding: 0.2rem 0.6rem; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.08em; font-family: "BricolageGrotesque", sans-serif; }
+.squad-body { display: grid; grid-template-columns: 1fr 320px; gap: 1.25rem; padding: 1.25rem; flex: 1; min-height: 0; }
+.player-browser { background: rgba(5,13,20,0.75); backdrop-filter: blur(16px); border: 1px solid rgba(255,255,255,0.07); border-radius: 10px; display: flex; flex-direction: column; overflow: hidden; }
+.browser-filters { display: flex; gap: 0.6rem; padding: 1rem; border-bottom: 1px solid rgba(255,255,255,0.07); flex-wrap: wrap; }
+.api-warning-banner { margin: 0.85rem 1rem 0; padding: 0.55rem 0.75rem; border-radius: 6px; border: 1px solid rgba(245,197,24,0.35); background: rgba(245,197,24,0.12); color: #ffe391; font-size: 0.78rem; }
+.api-error-banner { margin: 0.55rem 1rem 0; padding: 0.55rem 0.75rem; border-radius: 6px; border: 1px solid rgba(255,82,82,0.45); background: rgba(255,82,82,0.12); color: #ff9d9d; font-size: 0.78rem; }
+.browser-search { flex: 1; min-width: 160px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); border-radius: 6px; color: #fff; padding: 0.5rem 0.875rem; font-size: 0.85rem; outline: none; font-family: "GeneralSans", sans-serif; transition: border-color 0.2s; }
+.browser-search::placeholder { color: rgba(255,255,255,0.3); }
+.browser-search:focus { border-color: var(--color-green); }
+.browser-select { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); border-radius: 6px; color: #fff; padding: 0.5rem 0.75rem; font-size: 0.82rem; outline: none; cursor: pointer; font-family: "GeneralSans", sans-serif; }
+.browser-select option { background: #0a1628; }
+.player-table-wrap { overflow-y: auto; flex: 1; max-height: calc(100vh - 220px); }
+.player-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+.player-table thead th { background: rgba(5,13,20,0.9); color: var(--color-muted-text); font-family: "BricolageGrotesque", sans-serif; font-size: 0.68rem; letter-spacing: 0.12em; text-transform: uppercase; padding: 0.75rem 0.875rem; text-align: left; position: sticky; top: 0; z-index: 1; border-bottom: 1px solid rgba(255,255,255,0.07); }
+.player-row { cursor: pointer; border-bottom: 1px solid rgba(255,255,255,0.04); transition: background 0.15s; }
+.player-row:hover { background: rgba(39,163,86,0.07); }
+.player-row--selected { background: rgba(39,163,86,0.12) !important; border-left: 3px solid var(--color-green); }
+.player-table td { padding: 0.625rem 0.875rem; color: rgba(255,255,255,0.85); }
+.table-message { text-align: center; color: var(--color-muted-text); padding: 1rem 0.5rem !important; }
+.player-name-cell { font-weight: 600; font-family: "BricolageGrotesque", sans-serif; color: #fff !important; }
+.text-muted { color: var(--color-muted-text) !important; }
+.mini-bar-wrap { display: flex; align-items: center; gap: 0.5rem; }
+.mini-bar-val { font-size: 0.72rem; color: var(--color-muted-text); min-width: 22px; }
+.value-cell { color: var(--color-gold) !important; font-weight: 700; font-family: "BricolageGrotesque", sans-serif; }
+.xi-panel { background: rgba(5,13,20,0.8); backdrop-filter: blur(16px); border: 1px solid rgba(245,197,24,0.12); border-radius: 10px; display: flex; flex-direction: column; overflow: hidden; }
+.xi-panel-header { display: flex; align-items: center; justify-content: space-between; padding: 1rem 1.25rem; border-bottom: 1px solid rgba(245,197,24,0.1); }
+.xi-panel-title { font-family: "BricolageGrotesque", sans-serif; font-weight: 800; font-style: italic; font-size: 1.1rem; color: #fff; }
+.xi-count { background: rgba(255,255,255,0.08); border-radius: 20px; padding: 0.2rem 0.7rem; font-size: 0.82rem; font-weight: 700; color: rgba(255,255,255,0.5); }
+.xi-count--full { background: rgba(39,163,86,0.2); color: var(--color-green); }
+.xi-stats { padding: 0.75rem 1.25rem; border-bottom: 1px solid rgba(255,255,255,0.05); }
+.xi-stat-label { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.12em; color: var(--color-muted-text); font-family: "BricolageGrotesque", sans-serif; display: block; margin-bottom: 0.2rem; }
+.xi-stat-value { font-size: 0.9rem; font-weight: 700; color: #fff; font-family: "BricolageGrotesque", sans-serif; }
+.xi-over-budget { color: #ff5252 !important; }
+.xi-list { flex: 1; overflow-y: auto; padding: 0.75rem; display: flex; flex-direction: column; gap: 0.5rem; }
+.xi-pos-group { display: flex; flex-direction: column; }
+.xi-pos-label { font-size: 0.62rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.15em; color: var(--color-muted-text); font-family: "BricolageGrotesque", sans-serif; padding: 0.25rem 0.5rem; margin-bottom: 0.3rem; }
+.xi-player-row { display: flex; align-items: center; gap: 0.5rem; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.07); border-radius: 6px; padding: 0.5rem 0.75rem; }
+.xi-player-name { flex: 1; font-size: 0.82rem; font-weight: 600; color: #fff; font-family: "BricolageGrotesque", sans-serif; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.xi-player-club { font-size: 0.7rem; color: var(--color-muted-text); white-space: nowrap; }
+.xi-remove-btn { background: transparent; border: none; color: rgba(255,82,82,0.6); cursor: pointer; font-size: 1rem; line-height: 1; padding: 0 0.2rem; transition: color 0.15s; }
+.xi-remove-btn:hover { color: #ff5252; }
+.xi-empty { text-align: center; color: var(--color-muted-text); font-size: 0.82rem; padding: 2rem 1rem; line-height: 1.6; }
+.xi-actions { padding: 1rem; display: flex; flex-direction: column; gap: 0.6rem; border-top: 1px solid rgba(255,255,255,0.06); }
+.xi-run-btn, .xi-clear-btn { width: 100%; }

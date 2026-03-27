@@ -1,0 +1,77 @@
+.results-page { position: relative; min-height: 100vh; overflow: hidden; }
+.results-page-bg {
+  position: fixed; inset: 0;
+  background-image: url("/assets/uploads/epl_greatest-football-managers.avif");
+  background-size: cover; background-position: center;
+  filter: brightness(0.3) saturate(0.6); z-index: 0;
+}
+.results-page-overlay { position: fixed; inset: 0; background: linear-gradient(180deg, rgba(5,13,20,0.5) 0%, rgba(5,13,20,0.9) 100%); z-index: 1; }
+.results-page-inner { position: relative; z-index: 2; min-height: 100vh; display: flex; flex-direction: column; }
+.results-topbar { display: flex; align-items: center; gap: 1rem; padding: 1.25rem 1.5rem 1.25rem 5rem; background: rgba(5,13,20,0.6); backdrop-filter: blur(12px); border-bottom: 1px solid rgba(245,197,24,0.1); }
+.results-body { display: grid; grid-template-columns: 1fr 380px; gap: 1.25rem; padding: 1.25rem; flex: 1; }
+.pitch-section { display: flex; flex-direction: column; gap: 1rem; }
+.api-warning-banner { padding: 0.6rem 0.8rem; border-radius: 6px; border: 1px solid rgba(245,197,24,0.35); background: rgba(245,197,24,0.12); color: #ffe391; font-size: 0.78rem; }
+.pitch-container { flex: 1; position: relative; }
+.pitch-surface { position: relative; width: 100%; padding-top: 66%; background: linear-gradient(180deg, #1a6b2f 0%, #1d7a35 50%, #1a6b2f 100%); border-radius: 8px; border: 2px solid rgba(255,255,255,0.15); overflow: hidden; box-shadow: 0 8px 40px rgba(0,0,0,0.5), inset 0 0 60px rgba(0,0,0,0.2); }
+.pitch-center-circle { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); width: 18%; padding-top: 18%; border: 2px solid rgba(255,255,255,0.35); border-radius: 50%; }
+.pitch-center-dot { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); width: 8px; height: 8px; background: rgba(255,255,255,0.5); border-radius: 50%; }
+.pitch-halfway-line { position: absolute; top: 50%; left: 4%; right: 4%; height: 2px; background: rgba(255,255,255,0.25); transform: translateY(-50%); }
+.pitch-penalty-top { position: absolute; top: 4%; left: 30%; right: 30%; height: 16%; border: 2px solid rgba(255,255,255,0.25); border-top: none; }
+.pitch-penalty-bottom { position: absolute; bottom: 4%; left: 30%; right: 30%; height: 16%; border: 2px solid rgba(255,255,255,0.25); border-bottom: none; }
+.pitch-goal-top { position: absolute; top: 2%; left: 40%; right: 40%; height: 4%; border: 2px solid rgba(255,255,255,0.3); border-top: none; background: rgba(255,255,255,0.05); }
+.pitch-goal-bottom { position: absolute; bottom: 2%; left: 40%; right: 40%; height: 4%; border: 2px solid rgba(255,255,255,0.3); border-bottom: none; background: rgba(255,255,255,0.05); }
+.pitch-player { position: absolute; transform: translate(-50%,-50%); display: flex; flex-direction: column; align-items: center; gap: 3px; cursor: default; }
+.pitch-player-dot { width: 22px; height: 22px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.8); box-shadow: 0 2px 8px rgba(0,0,0,0.4); }
+.pitch-player-GK .pitch-player-dot { background: var(--color-gold); }
+.pitch-player-DF .pitch-player-dot { background: #2979ff; }
+.pitch-player-MF .pitch-player-dot { background: var(--color-green); }
+.pitch-player-FW .pitch-player-dot { background: #ff5252; }
+.pitch-player-name { font-size: 0.58rem; font-weight: 700; color: #fff; font-family: "BricolageGrotesque", sans-serif; text-shadow: 0 1px 4px rgba(0,0,0,0.8); white-space: nowrap; }
+.squad-score-card { background: rgba(5,13,20,0.8); backdrop-filter: blur(12px); border: 1px solid rgba(245,197,24,0.25); border-radius: 8px; padding: 1.25rem; text-align: center; display: flex; align-items: center; justify-content: center; gap: 1rem; }
+.squad-score-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.15em; color: var(--color-muted-text); font-family: "BricolageGrotesque", sans-serif; }
+.squad-score-value { font-size: 2.5rem; font-weight: 800; font-style: italic; color: var(--color-gold); font-family: "BricolageGrotesque", sans-serif; line-height: 1; }
+.squad-score-sub { font-size: 0.7rem; color: var(--color-muted-text); }
+.results-panel { background: rgba(5,13,20,0.8); backdrop-filter: blur(16px); border: 1px solid rgba(255,255,255,0.07); border-radius: 10px; overflow-y: auto; max-height: calc(100vh - 120px); padding: 1.25rem; display: flex; flex-direction: column; gap: 1.5rem; }
+.results-section { display: flex; flex-direction: column; }
+.results-section-title { font-family: "BricolageGrotesque", sans-serif; font-weight: 800; font-style: italic; font-size: 0.78rem; letter-spacing: 0.18em; text-transform: uppercase; color: var(--color-gold); margin: 0 0 0.875rem; }
+.analysis-card { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 0.85rem 0.95rem; color: rgba(255,255,255,0.88); font-size: 0.82rem; line-height: 1.5; }
+.analysis-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.45rem; }
+.analysis-score { font-family: "BricolageGrotesque", sans-serif; color: var(--color-gold); font-size: 0.95rem; font-weight: 800; }
+.analysis-verdict { color: var(--color-green); font-size: 0.74rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; }
+.analysis-review { margin: 0; }
+.analysis-chat {
+  margin: 0.7rem 0 0;
+  padding: 0.65rem 0.75rem;
+  border-radius: 6px;
+  border: 1px solid rgba(255,255,255,0.09);
+  background: rgba(5,13,20,0.55);
+  color: rgba(255,255,255,0.88);
+  white-space: pre-wrap;
+  font-family: "GeneralSans", sans-serif;
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+.analysis-review, .analysis-chat {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+.xi-cards { display: flex; flex-direction: column; gap: 0.5rem; }
+.xi-result-card { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.07); border-top: 2px solid rgba(245,197,24,0.3); border-radius: 6px; padding: 0.625rem 0.875rem; }
+.xi-result-top { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.3rem; }
+.xi-result-name { flex: 1; font-weight: 700; font-size: 0.85rem; color: #fff; font-family: "BricolageGrotesque", sans-serif; }
+.xi-result-value { font-size: 0.75rem; font-weight: 700; color: var(--color-gold); font-family: "BricolageGrotesque", sans-serif; }
+.xi-result-sub { font-size: 0.7rem; color: var(--color-muted-text); margin-bottom: 0.5rem; }
+.xi-result-bars { display: flex; flex-direction: column; gap: 0.3rem; }
+.xi-result-bar-row { display: flex; align-items: center; gap: 0.5rem; }
+.xi-result-bar-label { font-size: 0.62rem; color: var(--color-muted-text); text-transform: uppercase; letter-spacing: 0.08em; min-width: 56px; font-family: "BricolageGrotesque", sans-serif; }
+.xi-result-bar-val { font-size: 0.7rem; color: rgba(255,255,255,0.6); min-width: 22px; text-align: right; }
+.synergy-list { display: flex; flex-direction: column; gap: 0.5rem; }
+.synergy-row { display: flex; align-items: center; gap: 0.75rem; background: rgba(245,197,24,0.07); border: 1px solid rgba(245,197,24,0.15); border-radius: 6px; padding: 0.5rem 0.875rem; }
+.synergy-icon { color: var(--color-gold); font-size: 0.9rem; }
+.synergy-text { flex: 1; font-size: 0.82rem; color: rgba(255,255,255,0.85); }
+.synergy-bonus { color: var(--color-gold); font-weight: 800; font-size: 0.82rem; font-family: "BricolageGrotesque", sans-serif; }
+.chemistry-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem; }
+.chem-stat { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.07); border-radius: 6px; padding: 0.875rem; text-align: center; }
+.chem-val { display: block; font-size: 1.5rem; font-weight: 800; font-style: italic; color: #fff; font-family: "BricolageGrotesque", sans-serif; line-height: 1; margin-bottom: 0.35rem; }
+.chem-label { font-size: 0.65rem; color: var(--color-muted-text); text-transform: uppercase; letter-spacing: 0.1em; font-family: "BricolageGrotesque", sans-serif; }
+.results-actions { display: flex; flex-direction: column; gap: 0.6rem; }

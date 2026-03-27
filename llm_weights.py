@@ -300,3 +300,103 @@ def pundit_review_with_gemini(
         return text if text else "Pundit review unavailable: empty model response."
     except Exception as exc:
         return f"Pundit review unavailable: {exc}"
+
+
+def review_lineup_with_score_with_gemini(
+    user_text: str,
+    formation: str,
+    tactic: str,
+    squad_df,
+    model_name: str = "gemini-2.5-flash",
+    api_key: str | None = None,
+) -> Dict[str, Any]:
+    """
+    Second analyst agent: return review + score for the selected XI.
+
+    Output keys:
+    - score_100 (float)
+    - verdict (str)
+    - review (str)
+    - source ("gemini" or "fallback")
+    """
+    avg_quality = float(squad_df.get("quality", []).mean()) if len(squad_df) else 0.0
+    avg_fit = float(squad_df.get("tactic_fit", []).mean()) if len(squad_df) else 0.0
+    total_value_m = float(squad_df.get("value", []).sum()) / 1e6 if len(squad_df) else 0.0
+
+    fallback_score = round(max(0.0, min(100.0, 0.55 * avg_quality + 0.45 * avg_fit)), 1)
+    fallback_verdict = "Strong" if fallback_score >= 80 else ("Competitive" if fallback_score >= 65 else "Risky")
+    fallback_review = (
+        "Fallback analyst report: Gemini unavailable, so score is computed from squad metrics. "
+        f"Quality and tactic fit blended score is {fallback_score}/100. "
+        "Raise budget or loosen club constraints if you want more ceiling."
+    )
+
+    key = api_key or os.getenv("GEMINI_API_KEY", "")
+    if not key:
+        return {
+            "score_100": fallback_score,
+            "verdict": fallback_verdict,
+            "review": fallback_review,
+            "source": "fallback",
+        }
+
+    squad_lines = []
+    for _, row in squad_df.iterrows():
+        squad_lines.append(
+            f"{row.get('slot','?')} | {row.get('Player','Unknown')} | {row.get('Squad','Unknown')} | "
+            f"Q {float(row.get('quality',0)):.1f}% | Fit {float(row.get('tactic_fit',0)):.1f}% | "
+            f"EUR {float(row.get('value',0))/1e6:.1f}M"
+        )
+    squad_blob = "\n".join(squad_lines)
+
+    prompt = (
+        "You are Analyst #2 for a football XI builder.\n"
+        "Score and critique the lineup using user intent, tactical coherence, and player fit.\n\n"
+        f"User intent:\n{user_text.strip() or 'No specific request'}\n\n"
+        f"Formation: {formation}\n"
+        f"Tactic: {tactic}\n"
+        f"Average quality: {avg_quality:.1f}\n"
+        f"Average tactic fit: {avg_fit:.1f}\n"
+        f"Total value (EUR M): {total_value_m:.1f}\n\n"
+        f"Squad:\n{squad_blob}\n\n"
+        "Return strict JSON with this schema:\n"
+        "{\n"
+        "  \"score_100\": number,\n"
+        "  \"verdict\": string,\n"
+        "  \"review\": string\n"
+        "}\n"
+        "Rules:\n"
+        "- score_100 must be between 0 and 100.\n"
+        "- review should be concise and practical (3-5 sentences).\n"
+        "- Output JSON only."
+    )
+
+    try:
+        genai_mod = __import__("google.genai", fromlist=["Client", "types"])
+        client = genai_mod.Client(api_key=key)
+        genai_types = genai_mod.types
+        response = client.models.generate_content(
+            model=model_name,
+            contents=prompt,
+            config=genai_types.GenerateContentConfig(response_mime_type="application/json"),
+        )
+        parsed = json.loads(response.text)
+        score = float(parsed.get("score_100", fallback_score))
+        score = round(max(0.0, min(100.0, score)), 1)
+
+        verdict = str(parsed.get("verdict", fallback_verdict)).strip() or fallback_verdict
+        review = str(parsed.get("review", fallback_review)).strip() or fallback_review
+
+        return {
+            "score_100": score,
+            "verdict": verdict,
+            "review": review,
+            "source": "gemini",
+        }
+    except Exception:
+        return {
+            "score_100": fallback_score,
+            "verdict": fallback_verdict,
+            "review": fallback_review,
+            "source": "fallback",
+        }

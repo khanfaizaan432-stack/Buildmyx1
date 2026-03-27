@@ -1,0 +1,93 @@
+.sidebar-hamburger {
+  position: fixed;
+  top: 1.25rem;
+  left: 1.25rem;
+  z-index: 200;
+  background: rgba(5, 13, 20, 0.8);
+  border: 1px solid rgba(245, 197, 24, 0.3);
+  border-radius: 6px;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+  transition: border-color 0.2s, background 0.2s;
+}
+.sidebar-hamburger:hover { border-color: var(--color-gold); background: rgba(5,13,20,0.95); }
+.sidebar-hamburger span { display: block; width: 20px; height: 2px; background: #fff; border-radius: 2px; }
+
+.sidebar-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  z-index: 150;
+  backdrop-filter: blur(2px);
+}
+
+.sidebar-panel {
+  position: fixed;
+  top: 0; left: 0;
+  height: 100vh;
+  width: 260px;
+  background: linear-gradient(180deg, rgba(5, 13, 20, 0.9), rgba(5, 13, 20, 0.97)), url('/assets/uploads/epl_greatest-football-managers.avif');
+  background-size: cover;
+  background-position: center;
+  border-right: 1px solid rgba(245, 197, 24, 0.15);
+  backdrop-filter: blur(20px);
+  z-index: 180;
+  transform: translateX(-100%);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  flex-direction: column;
+  padding: 2rem 0 1.5rem;
+}
+.sidebar-panel--open { transform: translateX(0); }
+
+.sidebar-logo {
+  font-family: "BricolageGrotesque", sans-serif;
+  font-weight: 800;
+  font-style: italic;
+  font-size: 1.4rem;
+  color: var(--color-gold);
+  letter-spacing: 0.05em;
+  padding: 0 1.5rem 2rem;
+  border-bottom: 1px solid rgba(245,197,24,0.12);
+  margin-bottom: 1.5rem;
+}
+
+.sidebar-nav { display: flex; flex-direction: column; gap: 0.25rem; padding: 0 0.75rem; flex: 1; }
+
+.sidebar-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--color-muted-text);
+  font-family: "BricolageGrotesque", sans-serif;
+  font-size: 0.95rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  transition: all 0.18s;
+  text-align: left;
+  width: 100%;
+}
+.sidebar-nav-item:hover { background: rgba(39,163,86,0.1); color: #fff; }
+.sidebar-nav-item--active { background: rgba(39,163,86,0.15); color: #fff; border-left: 3px solid var(--color-green); }
+.sidebar-nav-label { flex: 1; }
+
+.sidebar-footer {
+  padding: 1.5rem;
+  font-size: 0.72rem;
+  color: rgba(255,255,255,0.2);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  border-top: 1px solid rgba(255,255,255,0.06);
+}

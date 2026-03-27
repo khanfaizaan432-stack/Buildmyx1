@@ -1,0 +1,93 @@
+.landing-page {
+  position: relative;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.landing-bg {
+  position: fixed;
+  inset: 0;
+  background-size: cover;
+  background-position: center top;
+  filter: brightness(0.6);
+  z-index: 0;
+}
+.landing-overlay {
+  position: fixed;
+  inset: 0;
+  background: linear-gradient(160deg, rgba(5,13,20,0.4) 0%, rgba(5,13,20,0.75) 60%, rgba(5,13,20,0.95) 100%);
+  z-index: 1;
+}
+.landing-content {
+  position: relative;
+  z-index: 2;
+  text-align: center;
+  padding: 2rem;
+  max-width: 640px;
+}
+.landing-badge {
+  display: inline-block;
+  background: var(--color-gold);
+  color: #000;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.2em;
+  padding: 0.3rem 1rem;
+  border-radius: 2px;
+  margin-bottom: 1.5rem;
+  text-transform: uppercase;
+  font-family: "BricolageGrotesque", sans-serif;
+}
+.landing-title {
+  font-size: clamp(4rem, 12vw, 8rem);
+  font-weight: 800;
+  font-style: italic;
+  color: #ffffff;
+  line-height: 0.9;
+  letter-spacing: -0.03em;
+  margin: 0 0 1.25rem;
+  font-family: "BricolageGrotesque", sans-serif;
+  text-shadow: 0 0 60px rgba(39,163,86,0.4), 0 4px 24px rgba(0,0,0,0.6);
+}
+.landing-tagline {
+  font-size: 1.15rem;
+  color: rgba(255,255,255,0.6);
+  margin: 0 0 2.75rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  font-family: "BricolageGrotesque", sans-serif;
+}
+.landing-ctas { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
+.btn-grad {
+  background: linear-gradient(135deg, #27a356 0%, #00c853 100%);
+  color: #fff;
+  font-weight: 800;
+  font-family: "BricolageGrotesque", sans-serif;
+  font-size: 0.9rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 0.9rem 2.5rem;
+  border-radius: 4px;
+  border: none;
+  cursor: pointer;
+  transition: filter 0.2s, transform 0.15s;
+  box-shadow: 0 4px 20px rgba(39,163,86,0.4);
+}
+.btn-grad:hover { filter: brightness(1.15); transform: translateY(-2px); }
+.btn-outline {
+  background: transparent;
+  color: #fff;
+  font-weight: 800;
+  font-family: "BricolageGrotesque", sans-serif;
+  font-size: 0.9rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 0.9rem 2.5rem;
+  border-radius: 4px;
+  border: 2px solid rgba(255,255,255,0.4);
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s, transform 0.15s;
+}
+.btn-outline:hover { border-color: #fff; background: rgba(255,255,255,0.08); transform: translateY(-2px); }
