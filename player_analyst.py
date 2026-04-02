@@ -137,7 +137,7 @@ def _extract_json(text: str) -> Optional[dict[str, Any]]:
 
 def gemini_player_profile_analysis(api_key: Optional[str], snippets: dict[str, Any], radar: dict[str, Any]) -> tuple[str, str]:
     """Returns (commentary, source). Commentary is 2–3 short paragraphs."""
-    key = api_key or os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY") or ""
+    key = api_key or os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY") or ""
     if not key:
         return (
             "AI analyst unavailable. Use the radar axes (percentiles vs peers) and key numbers above.",

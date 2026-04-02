@@ -15,9 +15,13 @@ from typing import Any, Optional
 GEMINI_MODEL_FLASH = "gemini-2.5-flash"
 
 
+def _resolve_api_key(api_key: Optional[str] = None) -> str:
+    return (api_key or os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY") or "").strip()
+
+
 def _generate_text(prompt: str, model_name: str, api_key: Optional[str]) -> str:
     """Generate text using Gemini with modern SDK first, then legacy fallback."""
-    key = api_key or os.getenv("GEMINI_API_KEY", "")
+    key = _resolve_api_key(api_key)
     if not key:
         return "AI service unavailable."
 
@@ -69,7 +73,7 @@ def run_pvp_expert_studio(api_key: Optional[str], context: dict[str, Any]) -> tu
     context must include deterministic grades and winner so the model stays aligned.
     Returns (fields dict with keys coach, analyst, pundit, key_battle, optional; all str), source.
     """
-    key = api_key or os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY") or ""
+    key = _resolve_api_key(api_key)
     if not key:
         return (
             {

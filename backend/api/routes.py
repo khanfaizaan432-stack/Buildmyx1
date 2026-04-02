@@ -18,7 +18,7 @@ from config import FORMATIONS, TACTIC_BEATS, TACTIC_COL
 from data_utils import load_data
 from optimizer import optimize
 from llm_weights import decide_squad_strategy_with_gemini, review_lineup_with_score_with_gemini
-from ai_agents import run_pvp_expert_studio
+from ai_agents import run_pvp_expert_studio, run_pundit_agent
 from pvp_grading import blended_pvp_grades, tactic_duel_winner, tactic_only_adjusted_grades
 from player_analyst import build_radar_series, build_stat_snippets, gemini_player_profile_analysis, primary_position
 
@@ -43,6 +43,24 @@ class Player(BaseModel):
     fit_high_line: float
     fit_false_9: float
     final_value: int
+
+
+class PlayerProfileResponse(BaseModel):
+    id: int
+    name: str
+    squad: str
+    nation: str
+    pos: str
+    sub_position: str
+    quality_final: float
+    final_value: int
+    image_url: Optional[str] = None
+    radar_labels: list[str]
+    radar_values: list[float]
+    stat_snippets: dict[str, Any]
+    analyst_comment: str
+    ai_source: str
+    warning: Optional[str] = None
 
 
 class OptimizeRequest(BaseModel):
@@ -122,7 +140,8 @@ _PLAYER_DF_CACHE: Optional[pd.DataFrame] = None
 
 
 def _gemini_key() -> str:
-    return os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY") or ""
+    # Prefer GOOGLE_API_KEY from backend/.env so local project config wins over any global shell key.
+    return os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY") or ""
 
 
 def _clamp01(value: Any) -> float:
@@ -325,6 +344,11 @@ def optimize_squad(request: OptimizeRequest) -> OptimizeResponse:
 
         lineup_players: list[Player] = []
         for picked in selected:
+            source_row = picked.get("source_row")
+            if isinstance(source_row, int) and 0 <= source_row < len(df):
+                lineup_players.append(_row_to_player(df.iloc[source_row]))
+                continue
+
             rows = df[(df["Player"] == picked["Player"]) & (df["Squad"] == picked["Squad"])]
             if rows.empty:
                 rows = df[df["Player"] == picked["Player"]]

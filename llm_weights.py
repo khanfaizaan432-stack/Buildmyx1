@@ -9,8 +9,15 @@ import os
 import re
 from typing import Iterable, Dict, Any
 
-DEFAULT_QUALITY_WEIGHT = 0.60
-DEFAULT_TACTIC_WEIGHT = 0.40
+from config import QUALITY_WEIGHT, TACTIC_WEIGHT
+
+DEFAULT_QUALITY_WEIGHT = QUALITY_WEIGHT
+DEFAULT_TACTIC_WEIGHT = TACTIC_WEIGHT
+
+
+def _resolve_api_key(api_key: str | None = None) -> str:
+    """Resolve Gemini key from explicit arg first, then supported env aliases."""
+    return (api_key or os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY") or "").strip()
 
 
 def _normalize_weights(quality_weight: Any, tactic_weight: Any) -> Dict[str, float]:
@@ -83,12 +90,12 @@ def decide_weights_with_gemini(
     """
     prompt = format_weight_prompt(user_text, dataframe_columns)
 
-    key = api_key or os.getenv("GEMINI_API_KEY", "")
+    key = _resolve_api_key(api_key)
     if not key:
         fallback = _normalize_weights(DEFAULT_QUALITY_WEIGHT, DEFAULT_TACTIC_WEIGHT)
         return {
             **fallback,
-            "rationale": "GEMINI_API_KEY not set; using default weights.",
+            "rationale": "Gemini API key not set; using default weights.",
             "source": "fallback",
         }
 
@@ -190,9 +197,9 @@ def decide_squad_strategy_with_gemini(
         "source": "fallback",
     }
 
-    key = api_key or os.getenv("GEMINI_API_KEY", "")
+    key = _resolve_api_key(api_key)
     if not key:
-        fallback["analyst_notes"] = "GEMINI_API_KEY not set; using fallback strategy."
+        fallback["analyst_notes"] = "Gemini API key not set; using fallback strategy."
         return fallback
 
     prompt = (
@@ -268,9 +275,9 @@ def pundit_review_with_gemini(
     api_key: str | None = None,
 ) -> str:
     """Generate a concise pundit-style review for the selected XI."""
-    key = api_key or os.getenv("GEMINI_API_KEY", "")
+    key = _resolve_api_key(api_key)
     if not key:
-        return "Pundit review unavailable: GEMINI_API_KEY not set."
+        return "Pundit review unavailable: Gemini API key not set."
 
     squad_lines = []
     for _, row in squad_df.iterrows():
@@ -331,7 +338,7 @@ def review_lineup_with_score_with_gemini(
         "Raise budget or loosen club constraints if you want more ceiling."
     )
 
-    key = api_key or os.getenv("GEMINI_API_KEY", "")
+    key = _resolve_api_key(api_key)
     if not key:
         return {
             "score_100": fallback_score,

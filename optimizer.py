@@ -6,6 +6,10 @@ from config import (
     TACTIC_COL,
     SYNERGY_PAIRS,
     SYNERGY_BONUS,
+    QUALITY_WEIGHT,
+    TACTIC_WEIGHT,
+    QUALITY_FLOOR,
+    TACTIC_FIT_FLOOR,
     SLOT_WHITELIST,
     TACTIC_SUB_POSITION_WEIGHT,
     GEOMETRY_WIDE_BONUS,
@@ -13,9 +17,6 @@ from config import (
     WIDE_CHANNEL_SUBS,
     CENTRAL_CHANNEL_SUBS,
 )
-
-QUALITY_WEIGHT = 0.60
-TACTIC_WEIGHT  = 0.40
 
 
 def _resolved_weights(quality_weight=None, tactic_weight=None):
@@ -160,8 +161,8 @@ def optimize(
     q_weight, t_weight = _resolved_weights(quality_weight, tactic_weight)
 
     # pre-filter; for hard single-club requests we can relax floors if needed.
-    quality_floor = 0.40
-    fit_floor = 0.35
+    quality_floor = QUALITY_FLOOR
+    fit_floor = TACTIC_FIT_FLOOR
     eligible = df[
         (df["quality_final"] >= quality_floor) &
         (df[tactic_col] >= fit_floor)
@@ -180,6 +181,7 @@ def optimize(
         if len(eligible) < 11:
             eligible = df[df["Squad"] == required_club].copy()
 
+    eligible["_source_row"] = eligible.index
     eligible = eligible.reset_index(drop=True)
     n = len(eligible)
 
@@ -281,6 +283,7 @@ def optimize(
                 selected.append({
                     "slot":        slot,
                     "slot_index":  s,
+                    "source_row":  int(row["_source_row"]),
                     "Player":      row["Player"],
                     "Squad":       row["Squad"],
                     "Nation":      row["Nation"],
