@@ -100,6 +100,24 @@ class DraftAnalysisResponse(BaseModel):
     grading_note: Optional[str] = None
 
 
+class PlayerProfileResponse(BaseModel):
+    id: int
+    name: str
+    squad: str
+    nation: str
+    pos: str
+    sub_position: str
+    quality_final: float
+    final_value: int
+    image_url: Optional[str] = None
+    radar_labels: list[str]
+    radar_values: list[float]
+    stat_snippets: list[str]
+    analyst_comment: str
+    ai_source: str
+    warning: Optional[str] = None
+
+
 _PLAYER_DF_CACHE: Optional[pd.DataFrame] = None
 
 
