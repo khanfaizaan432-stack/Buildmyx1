@@ -1,8 +1,17 @@
+import unicodedata
 import pandas as pd
 from pulp import LpProblem, LpVariable, LpBinary, LpMaximize, lpSum, LpStatus, PULP_CBC_CMD
 from config import (
-    FORMATIONS, TACTIC_COL, SYNERGY_PAIRS, SYNERGY_BONUS,
-    SLOT_WHITELIST
+    FORMATIONS,
+    TACTIC_COL,
+    SYNERGY_PAIRS,
+    SYNERGY_BONUS,
+    SLOT_WHITELIST,
+    TACTIC_SUB_POSITION_WEIGHT,
+    GEOMETRY_WIDE_BONUS,
+    GEOMETRY_CENTRAL_BONUS,
+    WIDE_CHANNEL_SUBS,
+    CENTRAL_CHANNEL_SUBS,
 )
 
 QUALITY_WEIGHT = 0.60
@@ -21,6 +30,59 @@ def _resolved_weights(quality_weight=None, tactic_weight=None):
         return QUALITY_WEIGHT, TACTIC_WEIGHT
 
     return q / total, t / total
+
+
+def _norm_player_key(name: str) -> str:
+    """ASCII fold + lowercase for matching CSV names to SYNERGY_PAIRS."""
+    s = unicodedata.normalize("NFKD", str(name or ""))
+    s = "".join(c for c in s if unicodedata.category(c) != "Mn")
+    return " ".join(s.lower().split())
+
+
+def _synergy_name_to_index(eligible: pd.DataFrame) -> dict[str, int]:
+    """Map normalized player key -> row index in eligible (last wins on collision)."""
+    out: dict[str, int] = {}
+    for i in range(len(eligible)):
+        row = eligible.iloc[i]
+        keys: set[str] = set()
+        for col in ("name_normalized", "Player"):
+            if col in row.index and pd.notna(row.get(col)):
+                keys.add(_norm_player_key(str(row.get(col))))
+        for k in keys:
+            if k:
+                out[k] = i
+    return out
+
+
+def _wide_line_slot_mask(slot_types: list[str], line: str) -> list[bool]:
+    """First/last slot of each defensive/forward line = wide channel (e.g. full-back / winger sides)."""
+    mask = [False] * len(slot_types)
+    indices = [j for j, p in enumerate(slot_types) if p == line]
+    if len(indices) >= 2:
+        mask[indices[0]] = True
+        mask[indices[-1]] = True
+    return mask
+
+
+def _geometry_bonus_for_slot(
+    slot: str,
+    slot_index: int,
+    sub: str,
+    wide_df: list[bool],
+    wide_fw: list[bool],
+) -> float:
+    if slot == "DF":
+        if wide_df[slot_index] and sub in WIDE_CHANNEL_SUBS["DF"]:
+            return GEOMETRY_WIDE_BONUS
+        if not wide_df[slot_index] and sub in CENTRAL_CHANNEL_SUBS["DF"]:
+            return GEOMETRY_CENTRAL_BONUS
+    elif slot == "FW":
+        if wide_fw[slot_index] and sub in WIDE_CHANNEL_SUBS["FW"]:
+            return GEOMETRY_WIDE_BONUS
+        if not wide_fw[slot_index] and sub in CENTRAL_CHANNEL_SUBS["FW"]:
+            return GEOMETRY_CENTRAL_BONUS
+    return 0.0
+
 
 def is_eligible(player_row, slot):
     """
@@ -132,25 +194,46 @@ def optimize(
     # slot_types = ["GK", "DF", "DF", "DF", "DF", "MF", ...]
 
     S = len(slot_types)
+    wide_df = _wide_line_slot_mask(slot_types, "DF")
+    wide_fw = _wide_line_slot_mask(slot_types, "FW")
+    tactic_sub_weights = TACTIC_SUB_POSITION_WEIGHT.get(tactic, {})
 
     # ILP variables: x[i][s] = 1 if player i fills slot s
     prob = LpProblem("BuildMyXI", LpMaximize)
     x    = [[LpVariable(f"x_{i}_{s}", cat=LpBinary) for s in range(S)] for i in range(n)]
 
-    # objective: maximize quality + tactic fit
-    # (Chemistry and synergy are computed post-optimization)
+    # objective: quality + tactic fit + role/tactic alignment + named club synergies (ILP linearized pairs)
     obj_terms = []
     preferred_set = {str(c).strip() for c in (preferred_clubs or []) if str(c).strip()}
     for i in range(n):
         row = eligible.loc[i]
         quality    = float(row["quality_final"])
         tactic_fit = float(row[tactic_col])
-        score = q_weight * quality + t_weight * tactic_fit
+        sub = str(row.get("sub_position", "")).strip()
+        role_w = float(tactic_sub_weights[sub]) if sub and sub in tactic_sub_weights else 0.0
+
+        base = q_weight * quality + t_weight * tactic_fit + role_w
         if preferred_set and str(row.get("Squad", "")).strip() in preferred_set:
-            score += 0.03
+            base += 0.03
 
         for s in range(S):
-            obj_terms.append(score * x[i][s])
+            slot = slot_types[s]
+            geo = _geometry_bonus_for_slot(slot, s, sub, wide_df, wide_fw)
+            obj_terms.append((base + geo) * x[i][s])
+
+    synergy_lookup = _synergy_name_to_index(eligible)
+    for name_a, name_b in SYNERGY_PAIRS:
+        ia = synergy_lookup.get(_norm_player_key(name_a))
+        ib = synergy_lookup.get(_norm_player_key(name_b))
+        if ia is None or ib is None or ia == ib:
+            continue
+        pick_a = lpSum(x[ia][s] for s in range(S))
+        pick_b = lpSum(x[ib][s] for s in range(S))
+        z = LpVariable(f"syn_{ia}_{ib}", cat=LpBinary)
+        prob += z <= pick_a
+        prob += z <= pick_b
+        prob += z >= pick_a + pick_b - 1
+        obj_terms.append(SYNERGY_BONUS * z)
 
     prob += lpSum(obj_terms)
 

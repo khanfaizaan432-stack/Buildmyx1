@@ -1,6 +1,6 @@
 import React from "react";
 
-type Page = "landing" | "tactics" | "squad" | "results" | "pvp";
+type Page = "landing" | "tactics" | "squad" | "results" | "pvp" | "profiles";
 
 interface SidebarProps {
   currentPage: Page;
@@ -15,6 +15,7 @@ const NAV_ITEMS: { page: Page; label: string }[] = [
   { page: "squad", label: "Squad Builder" },
   { page: "results", label: "Optimizer" },
   { page: "pvp", label: "PvP Draft" },
+  { page: "profiles", label: "Player profiles" },
 ];
 
 export default function Sidebar({ currentPage, setPage, isOpen, onToggle }: SidebarProps) {

@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { FORMATIONS, TACTICS, TACTIC_DESCRIPTIONS, type TacticName } from "../data/players";
+import { FORMATION_FIELD_POSITIONS, type FieldPos } from "../data/formationVisual";
 import "./TacticSelector.css";
 
 interface TacticSelectorProps {
@@ -9,23 +10,32 @@ interface TacticSelectorProps {
 
 const FORMATION_KEYS = Object.keys(FORMATIONS) as string[];
 
-function FormationDots({ formation }: { formation: string }) {
-  const slots = FORMATIONS[formation];
-  if (!slots) return null;
-  const rows: { pos: string; idx: number }[][] = [];
-  let counter = 0;
-  if (slots.FW > 0) rows.push(Array.from({ length: slots.FW }, (_, i) => ({ pos: "FW", idx: counter++ + i })));
-  if (slots.MF > 0) rows.push(Array.from({ length: slots.MF }, (_, i) => ({ pos: "MF", idx: counter++ + i })));
-  if (slots.DF > 0) rows.push(Array.from({ length: slots.DF }, (_, i) => ({ pos: "DF", idx: counter++ + i })));
-  rows.push([{ pos: "GK", idx: 99 }]);
+function FormationPitchMini({ formation }: { formation: string }) {
+  const slots: FieldPos[] = FORMATION_FIELD_POSITIONS[formation] ?? FORMATION_FIELD_POSITIONS["4-3-3"];
   return (
-    <div className="formation-dots">
-      {rows.map(row => (
-        <div key={row[0].pos + row[0].idx} className="formation-dots-row">
-          {row.map(d => <span key={`${d.pos}-${d.idx}`} className={`formation-dot formation-dot-${d.pos}`} />)}
-        </div>
+    <svg className="formation-pitch-svg" viewBox="0 0 100 100" aria-hidden>
+      <defs>
+        <linearGradient id={`pg-${formation}`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#256329" />
+          <stop offset="100%" stopColor="#1b4332" />
+        </linearGradient>
+      </defs>
+      <rect x="1.5" y="1.5" width="97" height="97" rx="3" fill={`url(#pg-${formation})`} stroke="rgba(255,255,255,0.22)" strokeWidth="0.5" />
+      <ellipse cx="50" cy="50" rx="16" ry="20" fill="none" stroke="rgba(255,255,255,0.18)" strokeWidth="0.45" />
+      <circle cx="50" cy="50" r="1.2" fill="rgba(255,255,255,0.35)" />
+      <line x1="1.5" y1="50" x2="98.5" y2="50" stroke="rgba(255,255,255,0.18)" strokeWidth="0.45" />
+      <rect x="32" y="3" width="36" height="10" rx="1" fill="none" stroke="rgba(255,255,255,0.14)" strokeWidth="0.4" />
+      <rect x="32" y="87" width="36" height="10" rx="1" fill="none" stroke="rgba(255,255,255,0.14)" strokeWidth="0.4" />
+      {slots.map((s, i) => (
+        <circle
+          key={`${formation}-${s.pos}-${i}`}
+          cx={s.left}
+          cy={s.top}
+          r={s.pos === "GK" ? 3.1 : 2.6}
+          className={`formation-pitch-dot formation-pitch-dot--${s.pos}`}
+        />
       ))}
-    </div>
+    </svg>
   );
 }
 
@@ -63,7 +73,7 @@ export default function TacticSelector({ onNext, onBack }: TacticSelectorProps) 
             <div className="formation-grid">
               {FORMATION_KEYS.map(f => (
                 <button type="button" key={f} className={`formation-card ${selectedFormation === f ? "formation-card--active" : ""}`} onClick={() => setSelectedFormation(f)}>
-                  <FormationDots formation={f} />
+                  <FormationPitchMini formation={f} />
                   <div className="formation-name">{f}</div>
                 </button>
               ))}

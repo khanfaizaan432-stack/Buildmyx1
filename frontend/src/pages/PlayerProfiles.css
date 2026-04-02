@@ -1,0 +1,101 @@
+.profiles-page { position: relative; min-height: 100vh; overflow: hidden; }
+.profiles-page-bg {
+  position: fixed; inset: 0;
+  background-image: url("/assets/uploads/epl_greatest-football-managers.avif");
+  background-size: cover; background-position: center;
+  filter: brightness(0.35) saturate(0.75); z-index: 0;
+}
+.profiles-page-overlay {
+  position: fixed; inset: 0;
+  background: linear-gradient(180deg, rgba(5,13,20,0.65) 0%, rgba(5,13,20,0.92) 100%);
+  z-index: 1;
+}
+.profiles-inner { position: relative; z-index: 2; min-height: 100vh; padding-bottom: 2rem; }
+.profiles-topbar {
+  display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;
+  padding: 1.25rem 1.5rem 1rem 5rem;
+  background: rgba(5,13,20,0.55); backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(245,197,24,0.1);
+}
+.profiles-badge {
+  font-family: "BricolageGrotesque", sans-serif; font-weight: 800; font-size: 0.65rem;
+  letter-spacing: 0.2em; text-transform: uppercase; color: var(--color-gold);
+  padding: 0.25rem 0.6rem; border: 1px solid rgba(245,197,24,0.35); border-radius: 4px;
+}
+.profiles-title {
+  margin: 0; font-family: "BricolageGrotesque", sans-serif; font-weight: 800; font-style: italic;
+  font-size: 1.25rem; color: #fff;
+}
+.profiles-banner {
+  margin: 0.75rem 1.5rem 0; padding: 0.55rem 0.85rem; border-radius: 6px;
+  background: rgba(41,121,255,0.15); border: 1px solid rgba(41,121,255,0.35);
+  color: #a8c7ff; font-size: 0.78rem;
+}
+.profiles-loading { padding: 1rem 1.5rem; color: var(--color-muted-text); }
+.profiles-layout {
+  display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 1.25rem;
+  padding: 1.25rem 1.5rem 0; max-width: 1200px; margin: 0 auto;
+}
+@media (max-width: 860px) {
+  .profiles-layout { grid-template-columns: 1fr; }
+}
+.profiles-side {
+  background: rgba(5,13,20,0.75); border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 10px; padding: 1rem; align-self: start;
+}
+.profiles-search-label { display: block; font-size: 0.65rem; color: var(--color-muted-text); margin-bottom: 0.35rem; text-transform: uppercase; letter-spacing: 0.08em; }
+.profiles-jump {
+  width: 100%; box-sizing: border-box; margin-bottom: 0.75rem;
+  background: rgba(10,22,40,0.9); border: 1px solid rgba(255,255,255,0.12); border-radius: 6px;
+  color: #fff; padding: 0.45rem 0.5rem; font-size: 0.85rem;
+}
+.profiles-nav { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; margin-bottom: 1rem; }
+.profiles-idx { font-size: 0.75rem; color: var(--color-gold); font-weight: 700; }
+.profiles-mini-list { list-style: none; margin: 0; padding: 0; max-height: 360px; overflow-y: auto; }
+.profiles-pick {
+  width: 100%; text-align: left; padding: 0.45rem 0.5rem; margin-bottom: 4px;
+  background: rgba(10,22,40,0.6); border: 1px solid transparent; border-radius: 6px;
+  color: #fff; cursor: pointer; font-size: 0.72rem;
+}
+.profiles-pick:hover { border-color: rgba(245,197,24,0.35); }
+.profiles-pick--on { border-color: var(--color-gold); background: rgba(245,197,24,0.1); }
+.profiles-pick-name { display: block; font-weight: 600; }
+.profiles-pick-meta { display: block; color: var(--color-muted-text); font-size: 0.65rem; }
+.profiles-main {
+  background: rgba(5,13,20,0.72); border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 10px; padding: 1.25rem;
+}
+.profiles-hero { display: flex; gap: 1rem; align-items: center; margin-bottom: 1rem; }
+.profiles-img { width: 96px; height: 96px; object-fit: cover; border-radius: 10px; border: 2px solid rgba(245,197,24,0.35); }
+.profiles-img--ph {
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(245,197,24,0.15); font-size: 2rem; font-weight: 800; color: var(--color-gold);
+}
+.profiles-name { margin: 0 0 0.35rem; font-family: "BricolageGrotesque", sans-serif; font-size: 1.35rem; font-weight: 800; color: #fff; }
+.profiles-meta { margin: 0.15rem 0; font-size: 0.82rem; color: var(--color-muted-text); }
+.profiles-split {
+  display: grid; grid-template-columns: minmax(0, 1fr) minmax(200px, 280px); gap: 1.5rem; margin-top: 1rem;
+}
+@media (max-width: 860px) {
+  .profiles-split { grid-template-columns: 1fr; }
+}
+.profiles-h3 {
+  margin: 0 0 0.5rem; font-family: "BricolageGrotesque", sans-serif; font-size: 0.72rem;
+  letter-spacing: 0.15em; text-transform: uppercase; color: var(--color-gold);
+}
+.profiles-radar-note { font-size: 0.72rem; color: var(--color-muted-text); margin: 0 0 0.75rem; line-height: 1.45; }
+.stat-radar-svg { display: block; margin: 0 auto; max-width: 100%; }
+.stat-radar-label { fill: rgba(255,255,255,0.78); font-size: 8px; font-weight: 600; }
+.stat-radar-fallback { color: var(--color-muted-text); font-size: 0.85rem; }
+.profiles-dl { margin: 0; }
+.profiles-dl-row {
+  display: grid; grid-template-columns: 1fr 1.2fr; gap: 0.5rem;
+  padding: 0.35rem 0; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 0.75rem;
+}
+.profiles-dl-row dt { color: var(--color-muted-text); text-transform: capitalize; margin: 0; }
+.profiles-dl-row dd { margin: 0; color: #e8eaf0; text-align: right; }
+.profiles-analyst { margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.08); }
+.profiles-analyst-body {
+  font-size: 0.88rem; line-height: 1.65; color: rgba(255,255,255,0.9); white-space: pre-wrap;
+}
+.profiles-muted { color: var(--color-muted-text); font-size: 0.85rem; }

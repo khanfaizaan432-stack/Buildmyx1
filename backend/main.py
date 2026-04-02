@@ -52,9 +52,5 @@ def health_check():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(
-        app,
-        host="0.0.0.0",
-        port=8000,
-        reload=True
-    )
+    # reload=True requires an import string (e.g. "main:app"), not the app object
+    uvicorn.run(app, host="0.0.0.0", port=8000, reload=False)

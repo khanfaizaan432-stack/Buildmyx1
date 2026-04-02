@@ -14,11 +14,13 @@ WORKSPACE_ROOT = Path(__file__).resolve().parents[2]
 if str(WORKSPACE_ROOT) not in sys.path:
     sys.path.append(str(WORKSPACE_ROOT))
 
-from config import FORMATIONS, TACTIC_COL
+from config import FORMATIONS, TACTIC_BEATS, TACTIC_COL
 from data_utils import load_data
 from optimizer import optimize
 from llm_weights import decide_squad_strategy_with_gemini, review_lineup_with_score_with_gemini
-from ai_agents import run_analyst_agent, run_coach_agent, run_pundit_agent
+from ai_agents import run_pvp_expert_studio
+from pvp_grading import blended_pvp_grades, tactic_duel_winner, tactic_only_adjusted_grades
+from player_analyst import build_radar_series, build_stat_snippets, gemini_player_profile_analysis, primary_position
 
 optimizer_router = APIRouter(tags=["optimizer"])
 squad_router = APIRouter(tags=["squad"])
@@ -91,6 +93,11 @@ class DraftAnalysisResponse(BaseModel):
     pundit_reaction: str
     ai_source: str
     warning: Optional[str] = None
+    p1_grade: Optional[float] = None
+    p2_grade: Optional[float] = None
+    key_battle: Optional[str] = None
+    winner_label: Optional[str] = None
+    grading_note: Optional[str] = None
 
 
 _PLAYER_DF_CACHE: Optional[pd.DataFrame] = None
@@ -178,6 +185,46 @@ def get_players() -> list[dict[str, Any]]:
         return [_row_to_player(row).model_dump() for _, row in preview_df.iterrows()]
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Failed to load players: {exc}")
+
+
+@optimizer_router.get("/players/{player_id}/profile")
+def get_player_profile(player_id: int) -> PlayerProfileResponse:
+    try:
+        df = _load_player_df()
+        row = _get_player_by_id(df, player_id)
+        if row is None:
+            raise HTTPException(status_code=404, detail="Player not found")
+        labels, values = build_radar_series(row)
+        snippets = build_stat_snippets(row)
+        radar_payload = {"labels": labels, "values": values, "role": primary_position(row)}
+        comment, src = gemini_player_profile_analysis(_gemini_key(), snippets, radar_payload)
+        comment = _compact_text(comment, 2400)
+        p = _row_to_player(row)
+        img = str(row.get("player_image_url", "") or "").strip()
+        warning = None
+        if src != "gemini":
+            warning = "Analyst commentary used fallback. Set GOOGLE_API_KEY for Gemini."
+        return PlayerProfileResponse(
+            id=p.id,
+            name=p.name,
+            squad=p.squad,
+            nation=p.nation,
+            pos=p.pos,
+            sub_position=p.sub_position,
+            quality_final=p.quality_final,
+            final_value=p.final_value,
+            image_url=img or None,
+            radar_labels=labels,
+            radar_values=values,
+            stat_snippets=snippets,
+            analyst_comment=comment,
+            ai_source=src,
+            warning=warning,
+        )
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Profile failed: {exc}")
 
 
 @optimizer_router.post("/optimize")
@@ -370,6 +417,22 @@ def analyze_squad(request: AnalyzeSquadRequest) -> AnalyzeResponse:
         raise HTTPException(status_code=500, detail=f"Squad analysis failed: {exc}")
 
 
+def _squad_digest_lines(rows: list, tactic: str, label: str, max_players: int = 6) -> list[str]:
+    if not rows:
+        return [f"{label}: (no players submitted — pure tactical duel)"]
+    tac_col = TACTIC_COL.get(tactic, "fit_gegenpress")
+    lines = [f"{label}: {len(rows)} players"]
+    for r in rows[:max_players]:
+        lines.append(
+            f"  - {r.get('Player', '?')} ({r.get('position', '?')}, {r.get('Squad', '?')}): "
+            f"Q {_clamp01(r.get('quality_final', 0)) * 100:.0f}, "
+            f"fit {_clamp01(r.get(tac_col, 0)) * 100:.0f}"
+        )
+    if len(rows) > max_players:
+        lines.append(f"  … +{len(rows) - max_players} more")
+    return lines
+
+
 @squad_router.post("/draft-analysis")
 def draft_analysis(request: DraftAnalysisRequest) -> DraftAnalysisResponse:
     try:
@@ -385,54 +448,74 @@ def draft_analysis(request: DraftAnalysisRequest) -> DraftAnalysisResponse:
             if _get_player_by_id(df, pid) is not None
         ]
 
-        p1_names = [str(r.get("Player", "Unknown")) for r in p1_rows]
-        p2_names = [str(r.get("Player", "Unknown")) for r in p2_rows]
-
         p1_form = request.p1_formation or "4-3-3"
         p2_form = request.p2_formation or "4-3-3"
         p1_tac = request.p1_tactic or "Gegenpress"
         p2_tac = request.p2_tactic or "High Press"
 
-        p1_budget = sum(float(pd.to_numeric(r.get("final_value", 0), errors="coerce") or 0.0) for r in p1_rows)
-        p1_score = round(
-            sum(_clamp01(r.get("quality_final", 0.0)) * 100.0 for r in p1_rows) / max(1, len(p1_rows)),
-            1,
-        )
-        p2_score = round(
-            sum(_clamp01(r.get("quality_final", 0.0)) * 100.0 for r in p2_rows) / max(1, len(p2_rows)),
-            1,
-        )
+        if p1_tac not in TACTIC_COL:
+            raise HTTPException(status_code=400, detail=f"Unsupported tactic (P1): {p1_tac}")
+        if p2_tac not in TACTIC_COL:
+            raise HTTPException(status_code=400, detail=f"Unsupported tactic (P2): {p2_tac}")
+        if p1_form not in FORMATIONS:
+            raise HTTPException(status_code=400, detail=f"Unsupported formation (P1): {p1_form}")
+        if p2_form not in FORMATIONS:
+            raise HTTPException(status_code=400, detail=f"Unsupported formation (P2): {p2_form}")
 
-        if p1_score > p2_score:
-            winner = "Player 1"
-        elif p2_score > p1_score:
-            winner = "Player 2"
+        duel = tactic_duel_winner(p1_tac, p2_tac)
+        if duel == "p1":
+            winner_label = "Player 1"
+        elif duel == "p2":
+            winner_label = "Player 2"
         else:
-            winner = "Draw"
+            winner_label = "Draw"
+
+        if not p1_rows and not p2_rows:
+            p1_grade, p2_grade, grading_note = tactic_only_adjusted_grades(p1_tac, p2_tac)
+        elif p1_rows and p2_rows:
+            p1_grade, p2_grade, grading_note, _ = blended_pvp_grades(p1_tac, p2_tac, p1_rows, p2_rows)
+        else:
+            p1_grade, p2_grade, grading_note = tactic_only_adjusted_grades(p1_tac, p2_tac)
+            grading_note += " Partial squad: one side had no roster data — grades are tactic-first."
 
         api_key = _gemini_key()
-        coach = _compact_text(run_coach_agent(api_key, p1_names, p1_form, p1_tac, p1_budget), 170)
-        analyst_raw = _compact_text(run_analyst_agent(api_key, p1_names, p1_form, p1_tac, p2_names, p2_form, p2_tac), 190)
-        pundit_raw = _compact_text(run_pundit_agent(api_key, analyst_raw, winner, p1_score, p2_score), 170)
-        analyst = (
-            f"Analyst: {analyst_raw}\n"
-            f"Pundit: {pundit_raw}\n"
-            "Analyst: That is the studio verdict."
-        )
-        pundit = pundit_raw
+        context = {
+            "mode": "pvp_draft",
+            "p1_tactic": p1_tac,
+            "p2_tactic": p2_tac,
+            "p1_formation": p1_form,
+            "p2_formation": p2_form,
+            "p1_grade": p1_grade,
+            "p2_grade": p2_grade,
+            "winner_label": winner_label,
+            "grading_note": grading_note,
+            "matchup_table": [f"{a} beats {b}" for a, b in sorted(TACTIC_BEATS.items())],
+            "squad_summaries": _squad_digest_lines(p1_rows, p1_tac, "Player 1 squad")
+            + _squad_digest_lines(p2_rows, p2_tac, "Player 2 squad"),
+        }
+        studio, src = run_pvp_expert_studio(api_key, context)
+        coach = _compact_text(studio.get("coach", ""), 520)
+        analyst = _compact_text(studio.get("analyst", ""), 650)
+        pundit = _compact_text(studio.get("pundit", ""), 420)
+        key_battle = _compact_text(studio.get("key_battle", ""), 120)
 
-        ai_failed = any("unavailable" in txt.lower() for txt in [coach, analyst, pundit])
+        warning = None
+        if src != "gemini":
+            warning = "Expert studio used fallback text. Check API key or model availability."
 
         return DraftAnalysisResponse(
             coach_commentary=coach,
             analyst_breakdown=analyst,
             pundit_reaction=pundit,
-            ai_source="fallback" if ai_failed else "gemini",
-            warning=(
-                "One or more AI agents were unavailable. Fallback text was shown."
-                if ai_failed
-                else None
-            ),
+            ai_source=src,
+            warning=warning,
+            p1_grade=p1_grade,
+            p2_grade=p2_grade,
+            key_battle=key_battle or None,
+            winner_label=winner_label,
+            grading_note=grading_note,
         )
+    except HTTPException:
+        raise
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Draft analysis failed: {exc}")

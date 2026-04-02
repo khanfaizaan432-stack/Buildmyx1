@@ -10,3 +10,15 @@ frontend/node_modules/
 frontend/dist/
 dist/
 *.msi
+frontend/.vite/
+*.log
+.coverage
+coverage/
+
+# Local accidental binaries/media (keep out of source control)
+CursorUserSetup-x64-2.6.22.exe
+Trae-Setup-x64.exe
+VSCodeUserSetup-x64-1.113.0.exe
+WarpSetup.exe
+holding-b-with-awp-vs-negev-after-getting-flashed-awp.mp4
+ZIDANE-juventus.jpg

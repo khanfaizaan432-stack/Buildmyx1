@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { type Player, SYNERGY_PAIRS, TACTIC_COL, type TacticName } from "../data/players";
+import { FORMATION_FIELD_POSITIONS } from "../data/formationVisual";
 import { apiClient, type AnalyzeResponse } from "../api/client";
 import "./OptimizerResults.css";
 
@@ -12,65 +13,15 @@ interface OptimizerResultsProps {
   onPvP: () => void;
 }
 
-const FORMATION_POSITIONS: Record<string, { pos: string; top: string; left: string }[]> = {
-  "4-3-3": [
-    { pos: "GK", top: "88%", left: "50%" },
-    { pos: "DF", top: "72%", left: "18%" }, { pos: "DF", top: "72%", left: "38%" }, { pos: "DF", top: "72%", left: "62%" }, { pos: "DF", top: "72%", left: "82%" },
-    { pos: "MF", top: "50%", left: "25%" }, { pos: "MF", top: "50%", left: "50%" }, { pos: "MF", top: "50%", left: "75%" },
-    { pos: "FW", top: "25%", left: "20%" }, { pos: "FW", top: "18%", left: "50%" }, { pos: "FW", top: "25%", left: "80%" },
-  ],
-  "4-4-2": [
-    { pos: "GK", top: "88%", left: "50%" },
-    { pos: "DF", top: "72%", left: "18%" }, { pos: "DF", top: "72%", left: "38%" }, { pos: "DF", top: "72%", left: "62%" }, { pos: "DF", top: "72%", left: "82%" },
-    { pos: "MF", top: "50%", left: "18%" }, { pos: "MF", top: "50%", left: "38%" }, { pos: "MF", top: "50%", left: "62%" }, { pos: "MF", top: "50%", left: "82%" },
-    { pos: "FW", top: "22%", left: "35%" }, { pos: "FW", top: "22%", left: "65%" },
-  ],
-  "4-2-3-1": [
-    { pos: "GK", top: "88%", left: "50%" },
-    { pos: "DF", top: "72%", left: "18%" }, { pos: "DF", top: "72%", left: "38%" }, { pos: "DF", top: "72%", left: "62%" }, { pos: "DF", top: "72%", left: "82%" },
-    { pos: "MF", top: "58%", left: "35%" }, { pos: "MF", top: "58%", left: "65%" },
-    { pos: "MF", top: "38%", left: "20%" }, { pos: "MF", top: "38%", left: "50%" }, { pos: "MF", top: "38%", left: "80%" },
-    { pos: "FW", top: "16%", left: "50%" },
-  ],
-  "3-5-2": [
-    { pos: "GK", top: "88%", left: "50%" },
-    { pos: "DF", top: "72%", left: "25%" }, { pos: "DF", top: "72%", left: "50%" }, { pos: "DF", top: "72%", left: "75%" },
-    { pos: "MF", top: "52%", left: "12%" }, { pos: "MF", top: "52%", left: "31%" }, { pos: "MF", top: "52%", left: "50%" }, { pos: "MF", top: "52%", left: "69%" }, { pos: "MF", top: "52%", left: "88%" },
-    { pos: "FW", top: "22%", left: "35%" }, { pos: "FW", top: "22%", left: "65%" },
-  ],
-  "5-3-2": [
-    { pos: "GK", top: "88%", left: "50%" },
-    { pos: "DF", top: "72%", left: "12%" }, { pos: "DF", top: "72%", left: "31%" }, { pos: "DF", top: "72%", left: "50%" }, { pos: "DF", top: "72%", left: "69%" }, { pos: "DF", top: "72%", left: "88%" },
-    { pos: "MF", top: "50%", left: "25%" }, { pos: "MF", top: "50%", left: "50%" }, { pos: "MF", top: "50%", left: "75%" },
-    { pos: "FW", top: "22%", left: "35%" }, { pos: "FW", top: "22%", left: "65%" },
-  ],
-  "3-4-3": [
-    { pos: "GK", top: "88%", left: "50%" },
-    { pos: "DF", top: "72%", left: "25%" }, { pos: "DF", top: "72%", left: "50%" }, { pos: "DF", top: "72%", left: "75%" },
-    { pos: "MF", top: "52%", left: "18%" }, { pos: "MF", top: "52%", left: "38%" }, { pos: "MF", top: "52%", left: "62%" }, { pos: "MF", top: "52%", left: "82%" },
-    { pos: "FW", top: "22%", left: "20%" }, { pos: "FW", top: "16%", left: "50%" }, { pos: "FW", top: "22%", left: "80%" },
-  ],
-  "4-1-4-1": [
-    { pos: "GK", top: "88%", left: "50%" },
-    { pos: "DF", top: "72%", left: "18%" }, { pos: "DF", top: "72%", left: "38%" }, { pos: "DF", top: "72%", left: "62%" }, { pos: "DF", top: "72%", left: "82%" },
-    { pos: "MF", top: "60%", left: "50%" },
-    { pos: "MF", top: "44%", left: "12%" }, { pos: "MF", top: "44%", left: "37%" }, { pos: "MF", top: "44%", left: "63%" }, { pos: "MF", top: "44%", left: "88%" },
-    { pos: "FW", top: "16%", left: "50%" },
-  ],
-  "4-4-1-1": [
-    { pos: "GK", top: "88%", left: "50%" },
-    { pos: "DF", top: "72%", left: "18%" }, { pos: "DF", top: "72%", left: "38%" }, { pos: "DF", top: "72%", left: "62%" }, { pos: "DF", top: "72%", left: "82%" },
-    { pos: "MF", top: "52%", left: "18%" }, { pos: "MF", top: "52%", left: "38%" }, { pos: "MF", top: "52%", left: "62%" }, { pos: "MF", top: "52%", left: "82%" },
-    { pos: "FW", top: "30%", left: "50%" }, { pos: "FW", top: "16%", left: "50%" },
-  ],
-};
-
 export default function OptimizerResults({ squad, tactic, formation, initialWarning, onBack, onPvP }: OptimizerResultsProps) {
   const [analysis, setAnalysis] = useState<AnalyzeResponse | null>(null);
   const [loadingAnalysis, setLoadingAnalysis] = useState(true);
   const [warning, setWarning] = useState<string | null>(initialWarning ?? null);
   const tacticCol = TACTIC_COL[tactic];
-  const positions = FORMATION_POSITIONS[formation] ?? FORMATION_POSITIONS["4-3-3"];
+  const positions = useMemo(() => {
+    const raw = FORMATION_FIELD_POSITIONS[formation] ?? FORMATION_FIELD_POSITIONS["4-3-3"];
+    return raw.map(p => ({ pos: p.pos, top: `${p.top}%`, left: `${p.left}%` }));
+  }, [formation]);
 
   useEffect(() => {
     const runAnalysis = async () => {
@@ -110,7 +61,7 @@ export default function OptimizerResults({ squad, tactic, formation, initialWarn
       used.set(slot.pos, usedCount + 1);
       return { slot, player, i };
     });
-  }, [squad, positions]);
+  }, [squad, positions, formation]);
 
   const activeSynergies = SYNERGY_PAIRS.filter(([a, b]) => squad.some(p => p.name === a) && squad.some(p => p.name === b));
   const clubCounts: Record<string, number> = {};

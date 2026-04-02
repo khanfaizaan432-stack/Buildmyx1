@@ -194,6 +194,86 @@ SYNERGY_PAIRS = [
 ]
 SYNERGY_BONUS = 0.03
 
+# Small objective nudge so wide channel slots prefer wide profiles (full-backs / wingers)
+# and central slots prefer CB / target strikers — aligns with how 4-3-3, 4-4-2, etc. are coached.
+GEOMETRY_WIDE_BONUS = 0.008
+GEOMETRY_CENTRAL_BONUS = 0.006
+
+WIDE_CHANNEL_SUBS = {
+    "DF": frozenset({"Full-Back", "Wing-Back", "Inverted Fullback"}),
+    "FW": frozenset({"Inside Forward", "Inverted Winger"}),
+}
+CENTRAL_CHANNEL_SUBS = {
+    "DF": frozenset({"Stopper", "Ball-Playing Defender"}),
+    "FW": frozenset({"Target Man", "False 9", "Pressing Forward", "Shadow Striker"}),
+}
+
+# Tactic ↔ sub-position fit nudges (additive on the ILP objective, scaled like quality 0–1).
+# Grounded in common roles: e.g. gegenpress favors athletic wide defenders and runners;
+# low block favors stoppers and a traditional GK; false-9 system favors false 9 / shadow ST.
+TACTIC_SUB_POSITION_WEIGHT: dict[str, dict[str, float]] = {
+    "Gegenpress": {
+        "Wing-Back": 0.018,
+        "Full-Back": 0.015,
+        "Inverted Fullback": 0.012,
+        "Box-to-Box MF": 0.016,
+        "Mezzala": 0.012,
+        "Pressing Forward": 0.016,
+        "Inside Forward": 0.012,
+    },
+    "High Press": {
+        "Wing-Back": 0.016,
+        "Full-Back": 0.014,
+        "Pressing Forward": 0.016,
+        "Box-to-Box MF": 0.015,
+        "Mezzala": 0.011,
+        "Sweeper Keeper": 0.012,
+    },
+    "Tiki-Taka": {
+        "Ball-Playing Defender": 0.018,
+        "Deep Lying Playmaker": 0.018,
+        "Advanced Playmaker": 0.016,
+        "Inverted Fullback": 0.014,
+        "Mezzala": 0.013,
+        "False 9": 0.010,
+    },
+    "Counter Attack": {
+        "Target Man": 0.017,
+        "Inside Forward": 0.013,
+        "Inverted Winger": 0.013,
+        "Stopper": 0.012,
+        "Defensive MF": 0.014,
+    },
+    "Park the Bus": {
+        "Stopper": 0.018,
+        "Traditional Keeper": 0.014,
+        "Defensive MF": 0.016,
+        "Full-Back": 0.008,
+        "Ball-Playing Defender": 0.010,
+    },
+    "Long Ball": {
+        "Target Man": 0.019,
+        "Wing-Back": 0.014,
+        "Traditional Keeper": 0.011,
+        "Pressing Forward": 0.009,
+        "Stopper": 0.011,
+    },
+    "High Line": {
+        "Sweeper Keeper": 0.017,
+        "Ball-Playing Defender": 0.015,
+        "Full-Back": 0.013,
+        "Inverted Fullback": 0.012,
+        "Stopper": 0.010,
+    },
+    "False 9": {
+        "False 9": 0.021,
+        "Shadow Striker": 0.017,
+        "Inside Forward": 0.014,
+        "Advanced Playmaker": 0.013,
+        "Mezzala": 0.011,
+    },
+}
+
 # ─────────────────────────────────────────────
 # TACTIC CLASH MULTIPLIER
 # ─────────────────────────────────────────────
@@ -204,6 +284,9 @@ TACTIC_BEATS = {
     "Tiki-Taka":      "Long Ball",
     "High Press":     "Long Ball",
     "High Line":      "Park the Bus",
+    "Long Ball":      "High Line",
+    "Park the Bus":   "Tiki-Taka",
+    "False 9":        "High Line",
 }
 
 # Chemistry bonuses
@@ -226,7 +309,15 @@ TACTIC_WEIGHT         = 0.40
 # A player's sub_position MUST be in this list to fill the slot
 SLOT_WHITELIST = {
     "GK": ["Sweeper Keeper", "Traditional Keeper"],
-    "DF": ["Ball-Playing Defender", "Stopper", "Full-Back", "Inverted Fullback", "Wing-Back"],
+    "DF": [
+        "Ball-Playing Defender",
+        "Stopper",
+        "Full-Back",
+        "Inverted Fullback",
+        "Wing-Back",
+        "Centre-Back",
+        "Center-Back",
+    ],
     "MF": ["Defensive MF", "Box-to-Box MF", "Advanced Playmaker", "Mezzala", 
            "Deep Lying Playmaker", "Inside Forward", "Inverted Winger"],
     "FW": ["Inside Forward", "Inverted Winger", "Pressing Forward", 

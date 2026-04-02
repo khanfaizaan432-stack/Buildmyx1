@@ -35,6 +35,11 @@ export interface DraftAnalysisResponse {
   pundit_reaction: string;
   ai_source: string;
   warning?: string;
+  p1_grade?: number;
+  p2_grade?: number;
+  key_battle?: string;
+  winner_label?: string;
+  grading_note?: string;
 }
 
 export interface DraftAnalysisOptions {
@@ -42,6 +47,24 @@ export interface DraftAnalysisOptions {
   p2_tactic?: string;
   p1_formation?: string;
   p2_formation?: string;
+}
+
+export interface PlayerProfileResponse {
+  id: number;
+  name: string;
+  squad: string;
+  nation: string;
+  pos: string;
+  sub_position: string;
+  quality_final: number;
+  final_value: number;
+  image_url?: string;
+  radar_labels: string[];
+  radar_values: number[];
+  stat_snippets: Record<string, unknown>;
+  analyst_comment: string;
+  ai_source: string;
+  warning?: string;
 }
 
 class ApiClient {
@@ -91,6 +114,11 @@ class ApiClient {
       p2_squad: p2Squad.map(p => p.id),
       ...options,
     });
+    return response.data;
+  }
+
+  async getPlayerProfile(playerId: number): Promise<PlayerProfileResponse> {
+    const response = await this.client.get<PlayerProfileResponse>(`/players/${playerId}/profile`);
     return response.data;
   }
 }

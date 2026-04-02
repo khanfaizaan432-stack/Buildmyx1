@@ -64,6 +64,9 @@ export const TACTIC_BEATS: Record<string, string> = {
   "Tiki-Taka": "Long Ball",
   "High Press": "Long Ball",
   "High Line": "Park the Bus",
+  "Long Ball": "High Line",
+  "Park the Bus": "Tiki-Taka",
+  "False 9": "High Line",
 };
 
 export const FORMATIONS: Record<string, { GK: number; DF: number; MF: number; FW: number }> = {

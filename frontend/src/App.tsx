@@ -6,9 +6,10 @@ import OptimizerResults from "./pages/OptimizerResults";
 import PvPDraft from "./pages/PvPDraft";
 import SquadBuilder from "./pages/SquadBuilder";
 import TacticSelector from "./pages/TacticSelector";
+import PlayerProfiles from "./pages/PlayerProfiles";
 import "./components/Sidebar.css";
 
-type Page = "landing" | "tactics" | "squad" | "results" | "pvp";
+type Page = "landing" | "tactics" | "squad" | "results" | "pvp" | "profiles";
 
 interface AppState {
   tactic: TacticName | null;
@@ -50,7 +51,13 @@ export default function App() {
     <>
       <Sidebar currentPage={page} setPage={navigatePage} isOpen={sidebarOpen} onToggle={() => setSidebarOpen(v => !v)} />
 
-      {page === "landing" && <LandingPage onBuildSquad={() => navigatePage("tactics")} onPvP={() => navigatePage("pvp")} />}
+      {page === "landing" && (
+        <LandingPage
+          onBuildSquad={() => navigatePage("tactics")}
+          onPvP={() => navigatePage("pvp")}
+          onProfiles={() => navigatePage("profiles")}
+        />
+      )}
 
       {page === "tactics" && (
         <TacticSelector
@@ -85,6 +92,8 @@ export default function App() {
       )}
 
       {page === "pvp" && <PvPDraft onBack={() => navigatePage("landing")} />}
+
+      {page === "profiles" && <PlayerProfiles onBack={() => navigatePage("landing")} />}
     </>
   );
 }

@@ -8,8 +8,9 @@
 .pvp-page-overlay { position: fixed; inset: 0; background: linear-gradient(180deg, rgba(5,13,20,0.55) 0%, rgba(5,13,20,0.9) 100%); z-index: 1; }
 .pvp-page-inner { position: relative; z-index: 2; min-height: 100vh; display: flex; flex-direction: column; }
 .pvp-topbar { display: flex; align-items: center; gap: 1rem; padding: 1.25rem 1.5rem 1.25rem 5rem; background: rgba(5,13,20,0.6); backdrop-filter: blur(12px); border-bottom: 1px solid rgba(245,197,24,0.1); }
+.pvp-pool-banner { margin: 0 1.5rem; padding: 0.55rem 0.85rem; border-radius: 6px; background: rgba(41,121,255,0.15); border: 1px solid rgba(41,121,255,0.35); color: #a8c7ff; font-size: 0.78rem; z-index: 2; position: relative; }
 .pvp-body { display: grid; grid-template-columns: 1fr auto 1fr; gap: 1.5rem; padding: 2rem 1.5rem; flex: 1; align-items: start; }
-.pvp-player-col { background: rgba(5,13,20,0.75); backdrop-filter: blur(16px); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 1.25rem; transition: border-color 0.3s, box-shadow 0.3s; }
+.pvp-player-col { background: rgba(5,13,20,0.75); backdrop-filter: blur(16px); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 1.25rem; transition: border-color 0.3s, box-shadow 0.3s; max-height: calc(100vh - 100px); overflow-y: auto; }
 .pvp-winner { border-color: var(--color-green) !important; box-shadow: 0 0 30px rgba(39,163,86,0.3); }
 .pvp-loser { border-color: rgba(255,82,82,0.3) !important; opacity: 0.7; filter: saturate(0.6); }
 .pvp-player-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; }
@@ -29,14 +30,50 @@
 .pvp-vs-badge { font-family: "BricolageGrotesque", sans-serif; font-weight: 800; font-style: italic; font-size: 2.5rem; background: linear-gradient(135deg, #f5c518, #ff9800); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; filter: drop-shadow(0 0 12px rgba(245,197,24,0.5)); letter-spacing: 0.05em; }
 .pvp-reveal-btn, .pvp-again-btn { min-width: 120px; text-align: center; }
 .pvp-hint { font-size: 0.72rem; color: var(--color-muted-text); text-align: center; max-width: 100px; line-height: 1.4; }
+.pvp-hint-wide { font-size: 0.72rem; color: var(--color-muted-text); text-align: center; max-width: 220px; line-height: 1.45; }
+.pvp-xi-block { margin-top: 1rem; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 0.85rem; }
+.pvp-xi-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--color-muted-text); }
+.pvp-xi-count { font-weight: 800; font-family: "BricolageGrotesque", sans-serif; color: #fff; }
+.pvp-xi-ready { color: var(--color-green); font-weight: 700; }
+.pvp-xi-wait { color: var(--color-gold); }
+.pvp-search { width: 100%; box-sizing: border-box; margin-bottom: 0.5rem; background: rgba(10,22,40,0.9); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: #fff; padding: 0.45rem 0.6rem; font-size: 0.78rem; }
+.pvp-mini-table-wrap { max-height: 220px; overflow: auto; border-radius: 6px; border: 1px solid rgba(255,255,255,0.06); }
+.pvp-mini-table { width: 100%; border-collapse: collapse; font-size: 0.68rem; }
+.pvp-mini-table th { position: sticky; top: 0; background: rgba(5,13,20,0.98); color: var(--color-muted-text); text-align: left; padding: 0.35rem 0.4rem; text-transform: uppercase; letter-spacing: 0.06em; font-size: 0.6rem; }
+.pvp-mini-table td { padding: 0.3rem 0.4rem; border-top: 1px solid rgba(255,255,255,0.04); color: rgba(255,255,255,0.88); }
+.pvp-mini-row--on { background: rgba(245,197,24,0.08); }
+.pvp-mini-name { font-weight: 600; max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pvp-mini-add { width: 1.75rem; height: 1.75rem; border-radius: 4px; border: 1px solid rgba(245,197,24,0.4); background: rgba(245,197,24,0.12); color: var(--color-gold); cursor: pointer; font-weight: 800; line-height: 1; }
+.pvp-mini-add:hover { background: rgba(245,197,24,0.22); }
+.pvp-mini-more { font-size: 0.62rem; color: var(--color-muted-text); padding: 0.35rem; text-align: center; }
+.pvp-reveal-xi { text-align: left; margin: 0.75rem 0 0; padding: 0 0 0 1.1rem; font-size: 0.72rem; color: rgba(255,255,255,0.85); line-height: 1.5; max-height: 200px; overflow-y: auto; }
+.pvp-reveal-xi li { margin-bottom: 0.2rem; }
+.pvp-reveal-pos { color: var(--color-muted-text); font-size: 0.65rem; margin-left: 0.25rem; }
 .pvp-reveal-card { background: rgba(245,197,24,0.06); border: 1px solid rgba(245,197,24,0.2); border-radius: 8px; padding: 2rem 1rem; text-align: center; }
 .pvp-reveal-label { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.15em; color: var(--color-muted-text); font-family: "BricolageGrotesque", sans-serif; margin-bottom: 0.75rem; }
+.pvp-reveal-shape { font-family: "BricolageGrotesque", sans-serif; font-weight: 700; font-size: 1.05rem; color: rgba(255,255,255,0.85); margin-bottom: 0.35rem; }
 .pvp-reveal-tactic { font-family: "BricolageGrotesque", sans-serif; font-weight: 800; font-style: italic; font-size: 1.4rem; color: var(--color-gold); margin-bottom: 0.5rem; }
+.pvp-form-row { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; margin-bottom: 1rem; font-size: 0.72rem; color: var(--color-muted-text); text-transform: uppercase; letter-spacing: 0.1em; }
+.pvp-form-select { flex: 1; max-width: 140px; background: rgba(10,22,40,0.95); border: 1px solid rgba(255,255,255,0.12); border-radius: 6px; color: #fff; padding: 0.45rem 0.5rem; font-size: 0.8rem; }
+.pvp-grade-panel { background: rgba(5,13,20,0.72); border: 1px solid rgba(245,197,24,0.15); border-radius: 8px; padding: 1rem 1.1rem; margin-bottom: 0.5rem; }
+.pvp-grade-row { display: grid; grid-template-columns: 7.5rem 1fr 2.5rem; align-items: center; gap: 0.6rem; margin-bottom: 0.5rem; font-size: 0.75rem; color: rgba(255,255,255,0.85); }
+.pvp-grade-row:last-of-type { margin-bottom: 0.65rem; }
+.pvp-grade-bar-wrap { height: 8px; background: rgba(255,255,255,0.08); border-radius: 4px; overflow: hidden; }
+.pvp-grade-bar { height: 100%; border-radius: 4px; background: linear-gradient(90deg, #2979ff, #f5c518); transition: width 0.4s ease; }
+.pvp-grade-bar--p2 { background: linear-gradient(90deg, #ff9800, #f5c518); }
+.pvp-grade-num { font-weight: 800; font-family: "BricolageGrotesque", sans-serif; color: var(--color-gold); text-align: right; }
+.pvp-key-battle { margin: 0.35rem 0 0; font-size: 0.85rem; font-style: italic; color: #fff; line-height: 1.45; }
+.pvp-grade-note { margin: 0.5rem 0 0; font-size: 0.72rem; color: var(--color-muted-text); line-height: 1.4; }
 .pvp-beats-text { font-size: 0.75rem; color: var(--color-green); font-weight: 600; }
 .pvp-counter-table-section { position: relative; z-index: 2; padding: 0 1.5rem 2rem; }
 .pvp-ai-panel { position: relative; z-index: 2; padding: 0 1.5rem 1.25rem; display: flex; flex-direction: column; gap: 0.8rem; }
 .api-warning-banner { padding: 0.6rem 0.8rem; border-radius: 6px; border: 1px solid rgba(245,197,24,0.35); background: rgba(245,197,24,0.12); color: #ffe391; font-size: 0.78rem; }
 .pvp-ai-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.75rem; }
+@media (max-width: 960px) {
+  .pvp-ai-grid { grid-template-columns: 1fr; }
+  .pvp-body { grid-template-columns: 1fr; }
+  .pvp-vs-col { padding-top: 1rem; order: 3; }
+}
 .pvp-ai-card { background: rgba(5,13,20,0.7); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 0.8rem 0.9rem; color: rgba(255,255,255,0.9); font-size: 0.8rem; line-height: 1.5; }
 .pvp-ai-card strong { display: block; color: var(--color-gold); margin-bottom: 0.35rem; font-family: "BricolageGrotesque", sans-serif; letter-spacing: 0.08em; text-transform: uppercase; font-size: 0.68rem; }
 .pvp-ai-card p { margin: 0; }

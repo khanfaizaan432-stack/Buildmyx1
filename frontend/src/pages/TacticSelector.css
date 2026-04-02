@@ -43,13 +43,11 @@
 .formation-card:hover { border-color: rgba(245,197,24,0.4); transform: translateY(-2px); }
 .formation-card--active { border-color: var(--color-gold) !important; background: rgba(245,197,24,0.08) !important; box-shadow: 0 0 0 1px var(--color-gold); }
 .formation-name { font-family: "BricolageGrotesque", sans-serif; font-weight: 700; font-size: 0.78rem; color: #fff; letter-spacing: 0.05em; }
-.formation-dots { display: flex; flex-direction: column; align-items: center; gap: 3px; }
-.formation-dots-row { display: flex; gap: 3px; justify-content: center; }
-.formation-dot { width: 7px; height: 7px; border-radius: 50%; }
-.formation-dot-GK { background: var(--color-gold); }
-.formation-dot-DF { background: #2979ff; }
-.formation-dot-MF { background: var(--color-green); }
-.formation-dot-FW { background: #ff5252; }
+.formation-pitch-svg { width: 100%; max-width: 88px; height: auto; aspect-ratio: 1; display: block; margin: 0 auto; }
+.formation-pitch-dot--GK { fill: #f5c518; stroke: rgba(0,0,0,0.35); stroke-width: 0.35; }
+.formation-pitch-dot--DF { fill: #42a5f5; stroke: rgba(0,0,0,0.3); stroke-width: 0.3; }
+.formation-pitch-dot--MF { fill: #66bb6a; stroke: rgba(0,0,0,0.3); stroke-width: 0.3; }
+.formation-pitch-dot--FW { fill: #ef5350; stroke: rgba(0,0,0,0.3); stroke-width: 0.3; }
 .sliders-section {
   background: rgba(10,22,40,0.7); backdrop-filter: blur(12px);
   border: 1px solid rgba(255,255,255,0.08); border-radius: 8px;

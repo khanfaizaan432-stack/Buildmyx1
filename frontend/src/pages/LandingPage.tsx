@@ -4,9 +4,10 @@ import "./LandingPage.css";
 interface LandingPageProps {
   onBuildSquad: () => void;
   onPvP: () => void;
+  onProfiles: () => void;
 }
 
-export default function LandingPage({ onBuildSquad, onPvP }: LandingPageProps) {
+export default function LandingPage({ onBuildSquad, onPvP, onProfiles }: LandingPageProps) {
   return (
     <div className="landing-page">
       <div className="landing-bg" style={{ backgroundImage: `url('/assets/uploads/epl_greatest-football-managers.avif')` }} />
@@ -18,6 +19,7 @@ export default function LandingPage({ onBuildSquad, onPvP }: LandingPageProps) {
         <div className="landing-ctas">
           <button type="button" className="btn-grad" onClick={onBuildSquad}>Build My Squad</button>
           <button type="button" className="btn-outline" onClick={onPvP}>PvP Draft</button>
+          <button type="button" className="btn-outline" onClick={onProfiles}>Player profiles</button>
         </div>
       </div>
     </div>
